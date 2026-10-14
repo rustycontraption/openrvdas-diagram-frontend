@@ -1,21 +1,15 @@
 'use client'
 
-import { useEffect, useState } from "react";
-import { Alert, Anchor, Button, Container, FileInput, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Alert, Button, Container, FileInput, Stack, Text, Title } from "@mantine/core";
 import classes from "@/components/Page.module.css";
 import { requestDiagram } from "@/diagramApi/client";
 import { DiagramApiError, type YamlFile } from "@/diagramApi/types";
-import { convertSvgToPngBlob, createSvgBlob, renderSvg } from "@/diagramRendering/graphvizRenderer";
+import { describeUpload, useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
 
 const YAML_FILE_TYPES = ".yml,.yaml";
 const INTERNAL_ERROR_CODE = "internal_error";
-const DOWNLOAD_FILE_STEM = "data-flow-generated";
-
-interface RenderedDiagram {
-    svg: string;
-    svgUrl: string;
-    graphml: string;
-}
 
 interface DisplayedError {
     message: string;
@@ -35,65 +29,32 @@ async function readYamlFiles(files: File[]): Promise<YamlFile[]> {
     return Promise.all(files.map(async (file) => ({ name: file.name, content: await file.text() })));
 }
 
-function downloadBlob(blob: Blob, fileName: string) {
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(blobUrl);
-}
-
 export default function Home() {
-    const [configFiles, setConfigFiles] = useState<File[]>([]);
-    const [templateFiles, setTemplateFiles] = useState<File[]>([]);
+    const router = useRouter();
+    const { configFiles, templateFiles, setConfigFiles, setTemplateFiles, showDiagram } = useDiagramSession();
     const [isGenerating, setIsGenerating] = useState(false);
     const [displayedError, setDisplayedError] = useState<DisplayedError | null>(null);
-    const [diagram, setDiagram] = useState<RenderedDiagram | null>(null);
-
-    // Release the previous SVG's object URL whenever the diagram is replaced or cleared
-    useEffect(() => {
-        return () => {
-            if (diagram) {
-                URL.revokeObjectURL(diagram.svgUrl);
-            }
-        };
-    }, [diagram]);
-
-    function clearPreviousOutcome() {
-        setDisplayedError(null);
-        setDiagram(null);
-    }
 
     async function generateDiagram() {
-        clearPreviousOutcome();
+        setDisplayedError(null);
         setIsGenerating(true);
         try {
             const result = await requestDiagram({
                 configFiles: await readYamlFiles(configFiles),
                 templateFiles: await readYamlFiles(templateFiles),
             });
-            const svg = await renderSvg(result.dot);
-            setDiagram({ svg, svgUrl: URL.createObjectURL(createSvgBlob(svg)), graphml: result.graphml });
+            await showDiagram({
+                dot: result.dot,
+                graphml: result.graphml,
+                summary: describeUpload(configFiles.length, templateFiles.length),
+            });
+            router.push("/diagram");
         } catch (error) {
             setDisplayedError(toDisplayedError(error));
         } finally {
             setIsGenerating(false);
         }
     }
-
-    async function downloadPng() {
-        if (!diagram) {
-            return;
-        }
-        try {
-            downloadBlob(await convertSvgToPngBlob(diagram.svg), `${DOWNLOAD_FILE_STEM}.png`);
-        } catch (error) {
-            setDisplayedError(toDisplayedError(error));
-        }
-    }
-
-    const graphmlDataUrl = diagram ? `data:application/xml;charset=utf-8,${encodeURIComponent(diagram.graphml)}` : "";
 
     return (
         <div>
@@ -112,7 +73,7 @@ export default function Home() {
                         clearable
                         withAsterisk
                         value={configFiles}
-                        onChange={(files) => { setConfigFiles(files); clearPreviousOutcome(); }}
+                        onChange={(files) => { setConfigFiles(files); setDisplayedError(null); }}
                     />
                     <FileInput
                         label="Logger template files"
@@ -122,7 +83,7 @@ export default function Home() {
                         multiple
                         clearable
                         value={templateFiles}
-                        onChange={(files) => { setTemplateFiles(files); clearPreviousOutcome(); }}
+                        onChange={(files) => { setTemplateFiles(files); setDisplayedError(null); }}
                     />
                     <Button onClick={generateDiagram} loading={isGenerating} disabled={configFiles.length === 0}>
                         Generate diagram
@@ -136,18 +97,6 @@ export default function Home() {
                         </Alert>
                     )}
                 </Stack>
-                {diagram && (
-                    <Stack w="100%">
-                        <Group justify="flex-end">
-                            <Anchor href={diagram.svgUrl} download={`${DOWNLOAD_FILE_STEM}.svg`}>Download SVG</Anchor>
-                            <Anchor component="button" type="button" onClick={downloadPng}>Download PNG</Anchor>
-                            <Anchor href={graphmlDataUrl} download={`${DOWNLOAD_FILE_STEM}.graphml`}>Download GraphML</Anchor>
-                        </Group>
-                        <Paper withBorder p="md" style={{ overflow: "auto" }}>
-                            <img src={diagram.svgUrl} alt="Generated OpenRVDAS data-flow diagram" style={{ maxWidth: "100%" }} />
-                        </Paper>
-                    </Stack>
-                )}
             </Container>
         </div>
     )

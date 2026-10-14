@@ -1,0 +1,65 @@
+/* The workspace fills the window below the sticky 56px header */
+.workspace {
+    height: calc(100dvh - 56px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.toolbar {
+    flex: none;
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+    border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+.summary {
+    color: var(--mantine-color-dimmed);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    @media (max-width: $mantine-breakpoint-sm) {
+        display: none;
+    }
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.canvas {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
+    cursor: grab;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.canvasViewport {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.diagramImage {
+    display: block;
+    max-width: none;
+    background-color: white;
+    border-radius: var(--mantine-radius-sm);
+    box-shadow: var(--mantine-shadow-sm);
+    user-select: none;
+}
+
+.settingsPanel {
+    flex: none;
+    width: 280px;
+    padding: var(--mantine-spacing-md);
+    overflow-y: auto;
+    border-left: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
