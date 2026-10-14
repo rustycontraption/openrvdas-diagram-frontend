@@ -1,0 +1,40 @@
+.header {
+    height: 56px;
+    background-color: transparent;
+    backdrop-filter: blur(1rem);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--mantine-color-body);
+    opacity: 0.75;
+    z-index: -1;
+}
+
+.inner {
+    height: 56px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.link {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    line-height: 1;
+    padding: 8px 12px;
+    gap: 0.5rem;
+    border-radius: var(--mantine-radius-sm);
+    text-decoration: none;
+    color: var(--mantine-color-gray);
+    font-weight: 500;
+}
