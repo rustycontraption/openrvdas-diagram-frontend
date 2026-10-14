@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: openrvdas-diagram API - turns OpenRVDAS YAMLs into GraphML and a PNG for openrvdas-diagram-site
+
+Parameters:
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Description: Origins allowed to call the API, e.g. https://main.abc123.amplifyapp.com
+
+Resources:
+  DiagramApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedOrigins
+        AllowMethods:
+          - POST
+        AllowHeaders:
+          - content-type
+      # Rendering is CPU heavy, so keep request rates modest
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+
+  DiagramFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 1024
+      # HTTP APIs give up after 30 seconds
+      Timeout: 29
+      Events:
+        GenerateDiagram:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DiagramApi
+            Path: /diagram
+            Method: POST
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+
+Outputs:
+  DiagramApiUrl:
+    Description: Set NEXT_PUBLIC_DIAGRAM_API_URL in Amplify to this value
+    Value: !Sub "https://${DiagramApi}.execute-api.${AWS::Region}.amazonaws.com"

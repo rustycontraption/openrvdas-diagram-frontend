@@ -1,0 +1,10 @@
+pyproject.toml
+src/openrvdas_diagram_lambda/__init__.py
+src/openrvdas_diagram_lambda/handler.py
+src/openrvdas_diagram_lambda/local_server.py
+src/openrvdas_diagram_lambda.egg-info/PKG-INFO
+src/openrvdas_diagram_lambda.egg-info/SOURCES.txt
+src/openrvdas_diagram_lambda.egg-info/dependency_links.txt
+src/openrvdas_diagram_lambda.egg-info/requires.txt
+src/openrvdas_diagram_lambda.egg-info/top_level.txt
+tests/test_handler.py

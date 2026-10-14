@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Alert, Anchor, Button, Container, FileInput, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import classes from "@/components/Page.module.css";
-import type { ApiErrorResponse, DiagramResult, YamlFile } from "@/server/diagramGenerator/types";
+import { requestDiagram } from "@/diagramApi/client";
+import { DiagramApiError, type DiagramResult, type YamlFile } from "@/diagramApi/types";
 
 const YAML_FILE_TYPES = ".yml,.yaml";
 const INTERNAL_ERROR_CODE = "internal_error";
@@ -13,10 +14,12 @@ interface DisplayedError {
     referenceId?: string;
 }
 
-function toDisplayedError(response: ApiErrorResponse): DisplayedError {
-    const { code, message, requestId } = response.error;
+function toDisplayedError(error: unknown): DisplayedError {
+    if (!(error instanceof DiagramApiError)) {
+        return { message: "Something went wrong while generating the diagram." };
+    }
     // Only unexpected errors need a reference to match the user's report to the server log
-    return { message, referenceId: code === INTERNAL_ERROR_CODE ? requestId : undefined };
+    return { message: error.message, referenceId: error.code === INTERNAL_ERROR_CODE ? error.requestId : undefined };
 }
 
 async function readYamlFiles(files: File[]): Promise<YamlFile[]> {
@@ -39,22 +42,12 @@ export default function Home() {
         clearPreviousOutcome();
         setIsGenerating(true);
         try {
-            const response = await fetch("/api/diagram", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    configFiles: await readYamlFiles(configFiles),
-                    templateFiles: await readYamlFiles(templateFiles),
-                }),
-            });
-            const responseBody = await response.json();
-            if (!response.ok) {
-                setDisplayedError(toDisplayedError(responseBody));
-                return;
-            }
-            setDiagram(responseBody);
-        } catch {
-            setDisplayedError({ message: "Could not reach the server. Please try again." });
+            setDiagram(await requestDiagram({
+                configFiles: await readYamlFiles(configFiles),
+                templateFiles: await readYamlFiles(templateFiles),
+            }));
+        } catch (error) {
+            setDisplayedError(toDisplayedError(error));
         } finally {
             setIsGenerating(false);
         }
