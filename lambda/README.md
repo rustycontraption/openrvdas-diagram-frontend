@@ -26,31 +26,63 @@ standalone command line tool; everything AWS-specific lives here.
 
 ## Local development
 
-Requirements: Python 3.12. Graphviz is not needed, since the Lambda only produces DOT text.
+### Requirements
+* Python 3.12 with venv support. On Ubuntu: `sudo apt install python3.12-venv`
+* A checkout of [openrvdas-diagram](https://github.com/rustycontraption/openrvdas-diagram) next to this repo, so the
+  folders look like this:
+  ```
+  git/
+  ├── openrvdas-diagram/        # the tool
+  └── openrvdas-diagram-site/   # this repo (lambda/ is inside it)
+  ```
+  If you don't have it yet, from the folder that contains this repo:
+  ```bash
+  git clone https://github.com/rustycontraption/openrvdas-diagram.git
+  ```
+
+Graphviz is not needed, since the Lambda only produces DOT text.
+
+### One-time setup
+Run these from the `lambda/` folder of this repo:
 
 ```bash
-python -m venv .venv
+cd lambda
+python3 -m venv .venv
 source .venv/bin/activate
-# Use a local checkout of the tool so changes to it are picked up immediately
+# Install the local tool checkout first, so changes to the tool are picked up immediately
 pip install -e ../../openrvdas-diagram pytest
+# Then this package, without letting pip replace the local tool with the version pinned in src/requirements.txt
 pip install --no-deps -e .
 ```
 
-To use the version pinned in `src/requirements.txt` instead, run `pip install -e '.[dev]'`.
+To use the version pinned in `src/requirements.txt` instead of a local checkout, replace the two `pip install`
+lines with `pip install -e '.[dev]'`.
 
-Run the tests:
+The `.venv` folder is specific to your machine and is not checked in.
 
+### Each new terminal
+Activate the venv before running anything below:
+
+```bash
+cd lambda
+source .venv/bin/activate
+```
+
+### Run the tests
 ```bash
 pytest
 ```
 
-Run the API locally for the site's dev server (`http://localhost:3000`):
-
+### Run the fake Lambda backend
 ```bash
 python -m openrvdas_diagram_lambda.local_server
 ```
 
-It listens on `http://localhost:3001/diagram`.
+It listens on `http://localhost:3001/diagram`, runs the real Lambda handler, and allows CORS requests from the site's
+dev server. Leave it running and start the site in a second terminal from the repo root with `npm run dev`. The site
+calls `http://localhost:3001` automatically during development.
+
+Stop it with Ctrl+C. Restart it after changing the handler or the tool, because it does not reload automatically.
 
 ## Deploying
 
