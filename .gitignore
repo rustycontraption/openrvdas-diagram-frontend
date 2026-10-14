@@ -7,3 +7,7 @@ next-env.d.ts
 .env*
 npm-debug.log*
 .DS_Store
+lambda/.venv
+lambda/.aws-sam
+__pycache__/
+

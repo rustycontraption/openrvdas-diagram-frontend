@@ -1,13 +1,21 @@
 'use client'
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Anchor, Button, Container, FileInput, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import classes from "@/components/Page.module.css";
 import { requestDiagram } from "@/diagramApi/client";
-import { DiagramApiError, type DiagramResult, type YamlFile } from "@/diagramApi/types";
+import { DiagramApiError, type YamlFile } from "@/diagramApi/types";
+import { convertSvgToPngBlob, createSvgBlob, renderSvg } from "@/diagramRendering/graphvizRenderer";
 
 const YAML_FILE_TYPES = ".yml,.yaml";
 const INTERNAL_ERROR_CODE = "internal_error";
+const DOWNLOAD_FILE_STEM = "data-flow-generated";
+
+interface RenderedDiagram {
+    svg: string;
+    svgUrl: string;
+    graphml: string;
+}
 
 interface DisplayedError {
     message: string;
@@ -16,6 +24,7 @@ interface DisplayedError {
 
 function toDisplayedError(error: unknown): DisplayedError {
     if (!(error instanceof DiagramApiError)) {
+        console.error(error);
         return { message: "Something went wrong while generating the diagram." };
     }
     // Only unexpected errors need a reference to match the user's report to the server log
@@ -26,12 +35,30 @@ async function readYamlFiles(files: File[]): Promise<YamlFile[]> {
     return Promise.all(files.map(async (file) => ({ name: file.name, content: await file.text() })));
 }
 
+function downloadBlob(blob: Blob, fileName: string) {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(blobUrl);
+}
+
 export default function Home() {
     const [configFiles, setConfigFiles] = useState<File[]>([]);
     const [templateFiles, setTemplateFiles] = useState<File[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [displayedError, setDisplayedError] = useState<DisplayedError | null>(null);
-    const [diagram, setDiagram] = useState<DiagramResult | null>(null);
+    const [diagram, setDiagram] = useState<RenderedDiagram | null>(null);
+
+    // Release the previous SVG's object URL whenever the diagram is replaced or cleared
+    useEffect(() => {
+        return () => {
+            if (diagram) {
+                URL.revokeObjectURL(diagram.svgUrl);
+            }
+        };
+    }, [diagram]);
 
     function clearPreviousOutcome() {
         setDisplayedError(null);
@@ -42,10 +69,12 @@ export default function Home() {
         clearPreviousOutcome();
         setIsGenerating(true);
         try {
-            setDiagram(await requestDiagram({
+            const result = await requestDiagram({
                 configFiles: await readYamlFiles(configFiles),
                 templateFiles: await readYamlFiles(templateFiles),
-            }));
+            });
+            const svg = await renderSvg(result.dot);
+            setDiagram({ svg, svgUrl: URL.createObjectURL(createSvgBlob(svg)), graphml: result.graphml });
         } catch (error) {
             setDisplayedError(toDisplayedError(error));
         } finally {
@@ -53,7 +82,17 @@ export default function Home() {
         }
     }
 
-    const pngDataUrl = diagram ? `data:image/png;base64,${diagram.pngBase64}` : "";
+    async function downloadPng() {
+        if (!diagram) {
+            return;
+        }
+        try {
+            downloadBlob(await convertSvgToPngBlob(diagram.svg), `${DOWNLOAD_FILE_STEM}.png`);
+        } catch (error) {
+            setDisplayedError(toDisplayedError(error));
+        }
+    }
+
     const graphmlDataUrl = diagram ? `data:application/xml;charset=utf-8,${encodeURIComponent(diagram.graphml)}` : "";
 
     return (
@@ -100,11 +139,12 @@ export default function Home() {
                 {diagram && (
                     <Stack w="100%">
                         <Group justify="flex-end">
-                            <Anchor href={pngDataUrl} download="data-flow-generated.png">Download PNG</Anchor>
-                            <Anchor href={graphmlDataUrl} download="data-flow-generated.graphml">Download GraphML</Anchor>
+                            <Anchor href={diagram.svgUrl} download={`${DOWNLOAD_FILE_STEM}.svg`}>Download SVG</Anchor>
+                            <Anchor component="button" type="button" onClick={downloadPng}>Download PNG</Anchor>
+                            <Anchor href={graphmlDataUrl} download={`${DOWNLOAD_FILE_STEM}.graphml`}>Download GraphML</Anchor>
                         </Group>
                         <Paper withBorder p="md" style={{ overflow: "auto" }}>
-                            <img src={pngDataUrl} alt="Generated OpenRVDAS data-flow diagram" style={{ maxWidth: "100%" }} />
+                            <img src={diagram.svgUrl} alt="Generated OpenRVDAS data-flow diagram" style={{ maxWidth: "100%" }} />
                         </Paper>
                     </Stack>
                 )}

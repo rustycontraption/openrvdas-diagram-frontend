@@ -11,7 +11,8 @@ export interface DiagramRequest {
 }
 
 export interface DiagramResult {
-    pngBase64: string;
+    /** Graphviz DOT source, laid out and drawn in the browser */
+    dot: string;
     graphml: string;
 }
 

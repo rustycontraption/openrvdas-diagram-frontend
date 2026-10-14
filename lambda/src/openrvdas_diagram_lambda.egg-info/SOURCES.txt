@@ -1,4 +1,6 @@
+README.md
 pyproject.toml
+src/requirements.txt
 src/openrvdas_diagram_lambda/__init__.py
 src/openrvdas_diagram_lambda/handler.py
 src/openrvdas_diagram_lambda/local_server.py

@@ -19,14 +19,14 @@ standalone command line tool; everything AWS-specific lives here.
 
 | Status | Body |
 |---|---|
-| 200 | `{ "pngBase64": "...", "graphml": "..." }` |
+| 200 | `{ "dot": "digraph {...}", "graphml": "..." }`. The browser lays out and draws the DOT with Graphviz compiled to WebAssembly |
 | 400 | `{ "error": { "code": "invalid_request", "message", "requestId" } }` |
 | 422 | `{ "error": { "code", "message", "details", "requestId" } }`. A problem in the uploaded files, with an openrvdas-diagram error code such as `missing_template_file` |
 | 500 | `{ "error": { "code": "internal_error", "message", "requestId" } }`. Details are only in the CloudWatch log line with the same `requestId` |
 
 ## Local development
 
-Requirements: Python 3.12 and Graphviz (`sudo apt install graphviz`).
+Requirements: Python 3.12. Graphviz is not needed, since the Lambda only produces DOT text.
 
 ```bash
 python -m venv .venv
@@ -36,7 +36,7 @@ pip install -e ../../openrvdas-diagram pytest
 pip install --no-deps -e .
 ```
 
-To use the version pinned in `pyproject.toml` instead, run `pip install -e '.[dev]'`.
+To use the version pinned in `src/requirements.txt` instead, run `pip install -e '.[dev]'`.
 
 Run the tests:
 
@@ -54,7 +54,8 @@ It listens on `http://localhost:3001/diagram`.
 
 ## Deploying
 
-Requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) and Docker.
+Requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html),
+AWS credentials (`aws configure`) and Python 3.12. The function is pure Python, so `sam build` packages a zip without Docker.
 
 ```bash
 sam build
@@ -63,6 +64,8 @@ sam deploy --guided --parameter-overrides AllowedOrigins=https://<branch>.<app-i
 
 The `DiagramApiUrl` stack output is the value for the site's `NEXT_PUBLIC_DIAGRAM_API_URL` in Amplify.
 
-When openrvdas-diagram changes, update the pinned commit in `pyproject.toml` and redeploy.
+When openrvdas-diagram changes, update the pinned commit in `src/requirements.txt` and redeploy. It is the only
+place the version is pinned; `pyproject.toml` reads it too.
 
-To test the container locally: `sam build && sam local start-api`, then POST to `http://127.0.0.1:3000/diagram`.
+Optional: `sam build && sam local start-api --port 3002` runs the packaged function in the real Lambda runtime
+(this one step does need Docker). Day-to-day development only needs `local_server` above.

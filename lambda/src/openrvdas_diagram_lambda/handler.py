@@ -1,4 +1,6 @@
-"""AWS Lambda entry point: turns uploaded OpenRVDAS YAMLs into generic GraphML and a PNG.
+"""AWS Lambda entry point: turns uploaded OpenRVDAS YAMLs into generic GraphML and Graphviz DOT.
+
+The browser lays out and draws the DOT itself, so no Graphviz binary is needed here.
 
 Invoked by an API Gateway HTTP API (payload format 2.0). CORS is configured on the API, not here.
 """
@@ -98,8 +100,7 @@ def generate_diagram(config_files, template_files):
         write_yaml_files(template_dir, template_files)
         inventory = LoggerInventoryBuilder().collectAndParseLoggers(config_dir=config_dir, template_dir=template_dir)
     graphml = GraphmlBuilder(inventory, graphml_format=GRAPHML_FORMAT_GENERIC).to_xml()
-    png_bytes = GraphmlRenderer(graphml).to_png()
-    return {"pngBase64": base64.b64encode(png_bytes).decode("ascii"), "graphml": graphml}
+    return {"dot": GraphmlRenderer(graphml).to_dot(), "graphml": graphml}
 
 
 def log_unexpected_error(request_id, error):

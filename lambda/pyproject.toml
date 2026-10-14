@@ -7,13 +7,13 @@ name = "openrvdas-diagram-lambda"
 version = "0.1.0"
 description = "AWS Lambda wrapper that serves openrvdas-diagram to the openrvdas-diagram-site frontend"
 requires-python = ">=3.12"
-dependencies = [
-    # Pinned to a commit so deployments are reproducible; update when the tool changes
-    "openrvdas-diagram @ git+https://github.com/rustycontraption/openrvdas-diagram@528e4389023cb6162025568dd52ff362925ed848",
-]
+dynamic = ["dependencies"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["src/requirements.txt"] }
 
 [tool.setuptools.packages.find]
 where = ["src"]

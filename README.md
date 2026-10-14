@@ -6,18 +6,21 @@ Web frontend for [openrvdas-diagram](https://github.com/rustycontraption/openrvd
 
 ```
 Browser (static Next.js site on AWS Amplify Hosting)
-   │  POST /diagram  {configFiles, templateFiles}
-   ▼
-API Gateway HTTP API  →  Lambda (lambda/: Python + Graphviz + openrvdas-diagram)
+   │  POST /diagram  {configFiles, templateFiles}        ▲  {dot, graphml}
+   ▼                                                      │
+API Gateway HTTP API  →  Lambda (lambda/: pure Python + openrvdas-diagram)
 ```
 
 * The site is a static export (`output: "export"`). It has no server code and stores nothing.
+* The Lambda returns Graphviz DOT text. The browser lays it out and draws it as SVG with Graphviz compiled to
+  WebAssembly ([`@hpcc-js/wasm-graphviz`](https://www.npmjs.com/package/@hpcc-js/wasm-graphviz)), loaded on first use.
+  PNG downloads are made in the browser from that SVG.
 * The diagram API lives in [`lambda/`](lambda/README.md) and is deployed separately with AWS SAM. openrvdas-diagram itself stays a standalone command line tool.
 
 ## Local Development Setup
 ### Requirements:
 * npm
-* Python 3.12 and Graphviz (`sudo apt install graphviz`) for the diagram API
+* Python 3.12 for the diagram API (Graphviz is not needed)
 ### Setup
 1) Run `npm install` to install dependencies.
 2) Set up the diagram API by following [lambda/README.md](lambda/README.md#local-development), then start it in its own terminal:

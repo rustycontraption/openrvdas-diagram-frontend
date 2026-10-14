@@ -1,4 +1,4 @@
-openrvdas-diagram @ git+https://github.com/rustycontraption/openrvdas-diagram@528e4389023cb6162025568dd52ff362925ed848
+openrvdas-diagram @ https://github.com/rustycontraption/openrvdas-diagram/archive/528e4389023cb6162025568dd52ff362925ed848.tar.gz
 
 [dev]
 pytest
