@@ -86,29 +86,52 @@ Stop it with Ctrl+C. Restart it after changing the handler or the tool, because 
 
 ## Deploying
 
-The function is set up by hand in the AWS Lambda console as a Python 3.12, **x86_64** function, with a zip upload
-and a Function URL in front of it.
+The function is set up by hand in the AWS Lambda console as a Python 3.12, **x86_64** function. It is made of two
+parts:
 
-### 1. Build the deployment zip
-From this `lambda/` folder (the venv doesn't need to be active):
+* **A layer** (`openrvdas-diagram-layer.zip`): openrvdas-diagram at the release pinned in `src/requirements.txt`, plus
+  PyYAML and graphviz. Every upload publishes a new numbered layer version, so going back to an earlier tool
+  release is a matter of picking an earlier version.
+* **The function code**: the contents of `src/openrvdas_diagram_lambda/handler.py`, pasted into the console's code
+  editor. It only imports the Python standard library and openrvdas-diagram, which the layer provides.
+
+`handler.py` in this repo is the source of truth: make changes there first, then paste them into the console, so
+the two never drift apart.
+
+The layer build commands below run from this `lambda/` folder; the venv doesn't need to be active. Build output
+goes to `build/` and `openrvdas-diagram-layer.zip`, neither of which is checked in. The zip is made with Python, so
+the `zip` command doesn't need to be installed.
+
+### 1. Build the layer
 
 ```bash
-rm -rf build function.zip
-pip install --target build -r src/requirements.txt
-cp -r src/openrvdas_diagram_lambda build/
-(cd build && zip -qr ../function.zip . -x '*/__pycache__/*')
+rm -rf build/layer openrvdas-diagram-layer.zip
+pip install --no-compile --target build/layer/python -r src/requirements.txt
+python3 -c "import shutil; shutil.make_archive('openrvdas-diagram-layer', 'zip', 'build/layer')"
 ```
 
-`function.zip` holds the handler, openrvdas-diagram at the release pinned in `src/requirements.txt`, and its
-dependencies. Building on Linux x86_64 with Python 3.12 gives a PyYAML build that matches the Lambda runtime.
-`build/` and `function.zip` are build output and are not checked in.
+Lambda loads a layer's Python packages from the `python/` folder inside its zip, which is why they are installed
+into `build/layer/python`. Build on Linux x86_64 with Python 3.12: PyYAML includes a compiled part that has to match
+the Lambda runtime.
 
-### 2. Upload it and configure the function
-* **Code** tab → **Upload from → .zip file** → choose `function.zip` → **Save**.
-* **Code** tab → **Runtime settings → Edit** → Handler: `openrvdas_diagram_lambda.handler.handle`
+### 2. Publish the layer
+Lambda console → **Layers → Create layer**:
+* Name: `openrvdas-diagram-layer` (keep the same name for later uploads, so they become new versions of
+  the same layer)
+* Upload `openrvdas-diagram-layer.zip`
+* Compatible architectures: `x86_64`; compatible runtimes: `Python 3.12`
+
+### 3. Add the function code
+* **Code** tab → open `lambda_function.py` → replace everything in it with the contents of
+  `src/openrvdas_diagram_lambda/handler.py` → **Deploy**.
+* **Code** tab → **Runtime settings → Edit** → Handler: `lambda_function.handle` (the file is `lambda_function.py`
+  and the function in it is `handle`).
+
+### 4. Configure the function
+* **Code** tab → **Layers → Add a layer → Custom layers** → choose `openrvdas-diagram-layer` and its newest version.
 * **Configuration → General configuration → Edit** → Timeout: 30 seconds.
 
-### 3. Test it in the console
+### 5. Test it in the console
 **Test** tab → create an event with this JSON → **Test**:
 
 ```json
@@ -120,7 +143,7 @@ dependencies. Building on Linux x86_64 with Python 3.12 gives a PyYAML build tha
 
 It should return `statusCode: 200` with `dot` and `graphml` in the body.
 
-### 4. Create the Function URL
+### 6. Create the Function URL
 **Configuration → Function URL → Create function URL**:
 * Auth type: `NONE`
 * **Configure cross-origin resource sharing (CORS)**:
@@ -129,11 +152,11 @@ It should return `statusCode: 200` with `dot` and `graphml` in the body.
   * Allow methods: `POST`
   * Allow headers: `content-type`
 
-### 5. Limit cost
+### 7. Limit cost
 A Function URL has no request throttling, so under **Configuration → Concurrency → Edit**, reserve a small number
 such as 5. New AWS accounts sometimes can't reserve concurrency; skip this step if the console refuses.
 
-### 6. Check it from outside
+### 8. Check it from outside
 
 ```bash
 curl -i -H 'Content-Type: application/json' \
@@ -141,10 +164,19 @@ curl -i -H 'Content-Type: application/json' \
   https://<function-url>/diagram
 ```
 
-### 7. Connect the site
+### 9. Connect the site
 In Amplify, set the environment variable `NEXT_PUBLIC_DIAGRAM_API_URL` to the Function URL and redeploy the site.
 The value is baked in when the site is built.
 
 ### Updating
-To deploy a newer openrvdas-diagram release, change the tag in `src/requirements.txt` (the only place the version
-is pinned; `pyproject.toml` reads it too). After any change, rebuild the zip (step 1) and upload it (step 2).
+* **New openrvdas-diagram release:** change the tag in `src/requirements.txt` (the only place the version is pinned;
+  `pyproject.toml` reads it too). Rebuild and publish the layer (steps 1 and 2), then in the function go to
+  **Code → Layers → Edit** and switch to the new layer version.
+* **Handler change:** paste the new contents of `handler.py` into `lambda_function.py` and click **Deploy**.
+
+### Rolling back
+In the function, go to **Code → Layers → Edit** and choose the previous layer version. This only rolls back the
+layer: if `handler.py` changed in the same release, also paste the older `handler.py` from git and click **Deploy**.
+
+To snapshot code and layer together, use **Actions → Publish new version** after each deployment and point an alias
+(e.g. `live`) at it; rolling back is then a matter of pointing the alias at an earlier version.
