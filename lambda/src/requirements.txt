@@ -1,3 +1,3 @@
-# The single place the openrvdas-diagram version is pinned. pyproject.toml reads it for local installs and
-# `sam build` reads it to package the Lambda. Update the commit when the tool changes.
-openrvdas-diagram @ https://github.com/rustycontraption/openrvdas-diagram/archive/528e4389023cb6162025568dd52ff362925ed848.tar.gz
+# The single place the openrvdas-diagram version is pinned. pyproject.toml reads it for local installs, and the
+# deployment zip is built from it (see README.md). Change the tag to deploy a newer release.
+openrvdas-diagram @ https://github.com/rustycontraption/openrvdas-diagram/archive/refs/tags/v0.1.0.tar.gz

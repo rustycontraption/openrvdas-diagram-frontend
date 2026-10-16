@@ -1,4 +1,4 @@
-"""Development-only HTTP server that runs the Lambda handler locally, standing in for API Gateway.
+"""Development-only HTTP server that runs the Lambda handler locally, standing in for the Lambda Function URL.
 
 Usage: python -m openrvdas_diagram_lambda.local_server [--port 3001] [--allowed-origin http://localhost:3000]
 """

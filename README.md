@@ -8,14 +8,14 @@ Web frontend for [openrvdas-diagram](https://github.com/rustycontraption/openrvd
 Browser (static Next.js site on AWS Amplify Hosting)
    │  POST /diagram  {configFiles, templateFiles}        ▲  {dot, graphml}
    ▼                                                      │
-API Gateway HTTP API  →  Lambda (lambda/: pure Python + openrvdas-diagram)
+Lambda Function URL  →  Lambda (lambda/: pure Python + openrvdas-diagram)
 ```
 
 * The site is a static export (`output: "export"`). It has no server code and stores nothing.
 * The Lambda returns Graphviz DOT text. The browser lays it out and draws it as SVG with Graphviz compiled to
   WebAssembly ([`@hpcc-js/wasm-graphviz`](https://www.npmjs.com/package/@hpcc-js/wasm-graphviz)), loaded on first use.
   PNG downloads are made in the browser from that SVG.
-* The diagram API lives in [`lambda/`](lambda/README.md) and is deployed separately with AWS SAM. openrvdas-diagram itself stays a standalone command line tool.
+* The diagram API lives in [`lambda/`](lambda/README.md) and is set up manually in the AWS Lambda console. openrvdas-diagram itself stays a standalone command line tool.
 
 ## Local Development Setup
 ### Requirements:
@@ -32,7 +32,7 @@ API Gateway HTTP API  →  Lambda (lambda/: pure Python + openrvdas-diagram)
 4) Open [http://localhost:3000](http://localhost:3000) in a browser
 
 ## Deploying
-1) Deploy the diagram API (see [lambda/README.md](lambda/README.md#deploying)) and note its `DiagramApiUrl` output.
+1) Set up the diagram Lambda and its Function URL (see [lambda/README.md](lambda/README.md#deploying)) and copy the Function URL.
 2) In the Amplify console, connect this repository. `amplify.yml` builds the static site into `out/`.
-3) Set the Amplify environment variable `NEXT_PUBLIC_DIAGRAM_API_URL` to the `DiagramApiUrl`, and redeploy. The value is baked in at build time.
-4) Make sure the API's `AllowedOrigins` parameter includes the Amplify domain.
+3) Set the Amplify environment variable `NEXT_PUBLIC_DIAGRAM_API_URL` to the Function URL, and redeploy. The value is baked in at build time.
+4) Make sure the Function URL's CORS allowed origins include the Amplify domain.

@@ -1,6 +1,6 @@
 # openrvdas-diagram-lambda
 
-The backend for openrvdas-diagram-site. It is an AWS Lambda behind an API Gateway HTTP API that runs
+The backend for openrvdas-diagram-site. It is an AWS Lambda, reached through a Lambda Function URL, that runs
 [openrvdas-diagram](https://github.com/rustycontraption/openrvdas-diagram) as a library. The tool itself stays a
 standalone command line tool; everything AWS-specific lives here.
 
@@ -86,18 +86,65 @@ Stop it with Ctrl+C. Restart it after changing the handler or the tool, because 
 
 ## Deploying
 
-Requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html),
-AWS credentials (`aws configure`) and Python 3.12. The function is pure Python, so `sam build` packages a zip without Docker.
+The function is set up by hand in the AWS Lambda console as a Python 3.12, **x86_64** function, with a zip upload
+and a Function URL in front of it.
+
+### 1. Build the deployment zip
+From this `lambda/` folder (the venv doesn't need to be active):
 
 ```bash
-sam build
-sam deploy --guided --parameter-overrides AllowedOrigins=https://<branch>.<app-id>.amplifyapp.com
+rm -rf build function.zip
+pip install --target build -r src/requirements.txt
+cp -r src/openrvdas_diagram_lambda build/
+(cd build && zip -qr ../function.zip . -x '*/__pycache__/*')
 ```
 
-The `DiagramApiUrl` stack output is the value for the site's `NEXT_PUBLIC_DIAGRAM_API_URL` in Amplify.
+`function.zip` holds the handler, openrvdas-diagram at the release pinned in `src/requirements.txt`, and its
+dependencies. Building on Linux x86_64 with Python 3.12 gives a PyYAML build that matches the Lambda runtime.
+`build/` and `function.zip` are build output and are not checked in.
 
-When openrvdas-diagram changes, update the pinned commit in `src/requirements.txt` and redeploy. It is the only
-place the version is pinned; `pyproject.toml` reads it too.
+### 2. Upload it and configure the function
+* **Code** tab → **Upload from → .zip file** → choose `function.zip` → **Save**.
+* **Code** tab → **Runtime settings → Edit** → Handler: `openrvdas_diagram_lambda.handler.handle`
+* **Configuration → General configuration → Edit** → Timeout: 30 seconds.
 
-Optional: `sam build && sam local start-api --port 3002` runs the packaged function in the real Lambda runtime
-(this one step does need Docker). Day-to-day development only needs `local_server` above.
+### 3. Test it in the console
+**Test** tab → create an event with this JSON → **Test**:
+
+```json
+{
+  "body": "{\"configFiles\":[{\"name\":\"ship.yaml\",\"content\":\"loggers: {}\\n\"}]}",
+  "isBase64Encoded": false
+}
+```
+
+It should return `statusCode: 200` with `dot` and `graphml` in the body.
+
+### 4. Create the Function URL
+**Configuration → Function URL → Create function URL**:
+* Auth type: `NONE`
+* **Configure cross-origin resource sharing (CORS)**:
+  * Allow origin: the Amplify URL (e.g. `https://main.<app-id>.amplifyapp.com`), plus `http://localhost:3000` if
+    local development should use the deployed function
+  * Allow methods: `POST`
+  * Allow headers: `content-type`
+
+### 5. Limit cost
+A Function URL has no request throttling, so under **Configuration → Concurrency → Edit**, reserve a small number
+such as 5. New AWS accounts sometimes can't reserve concurrency; skip this step if the console refuses.
+
+### 6. Check it from outside
+
+```bash
+curl -i -H 'Content-Type: application/json' \
+  -d '{"configFiles":[{"name":"ship.yaml","content":"loggers: {}\n"}]}' \
+  https://<function-url>/diagram
+```
+
+### 7. Connect the site
+In Amplify, set the environment variable `NEXT_PUBLIC_DIAGRAM_API_URL` to the Function URL and redeploy the site.
+The value is baked in when the site is built.
+
+### Updating
+To deploy a newer openrvdas-diagram release, change the tag in `src/requirements.txt` (the only place the version
+is pinned; `pyproject.toml` reads it too). After any change, rebuild the zip (step 1) and upload it (step 2).

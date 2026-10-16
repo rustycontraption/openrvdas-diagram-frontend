@@ -2,7 +2,8 @@
 
 The browser lays out and draws the DOT itself, so no Graphviz binary is needed here.
 
-Invoked by an API Gateway HTTP API (payload format 2.0). CORS is configured on the API, not here.
+Invoked through a Lambda Function URL (payload format 2.0, the same as an API Gateway HTTP API).
+CORS is configured on the Function URL, not here.
 """
 
 import base64

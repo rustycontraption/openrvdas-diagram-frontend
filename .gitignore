@@ -9,5 +9,9 @@ npm-debug.log*
 .DS_Store
 lambda/.venv
 lambda/.aws-sam
+lambda/build/
+lambda/function.zip
+*.egg-info/
 *__pycache__/
+
 

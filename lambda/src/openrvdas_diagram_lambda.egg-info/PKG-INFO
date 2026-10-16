@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: openrvdas-diagram-lambda
-Version: 0.1.0
-Summary: AWS Lambda wrapper that serves openrvdas-diagram to the openrvdas-diagram-site frontend
-Requires-Python: >=3.12
-Requires-Dist: openrvdas-diagram @ https://github.com/rustycontraption/openrvdas-diagram/archive/528e4389023cb6162025568dd52ff362925ed848.tar.gz
-Provides-Extra: dev
-Requires-Dist: pytest; extra == "dev"
