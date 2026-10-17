@@ -31,7 +31,7 @@ async function readErrorResponse(response: Response): Promise<DiagramApiError> {
         const { error } = (await response.json()) as ApiErrorResponse;
         return new DiagramApiError(error.code, userMessageFor(error), error.details, error.requestId);
     } catch {
-        // Not our error format, e.g. a Lambda throttling or timeout response
+        // Not our error format, e.g. an API Gateway throttling or timeout response
         return new DiagramApiError("internal_error", "Something went wrong while generating the diagram.");
     }
 }

@@ -8,14 +8,15 @@ Web frontend for [openrvdas-diagram](https://github.com/rustycontraption/openrvd
 Browser (static Next.js site on AWS Amplify Hosting)
    │  POST /diagram  {configFiles, templateFiles}        ▲  {dot, graphml}
    ▼                                                      │
-Lambda Function URL  →  Lambda (lambda/: pure Python + openrvdas-diagram)
+API Gateway HTTP API  →  Lambda (lambda/: pure Python + openrvdas-diagram, private)
 ```
 
 * The site is a static export (`output: "export"`). It has no server code and stores nothing.
 * The Lambda returns Graphviz DOT text. The browser lays it out and draws it as SVG with Graphviz compiled to
   WebAssembly ([`@hpcc-js/wasm-graphviz`](https://www.npmjs.com/package/@hpcc-js/wasm-graphviz)), loaded on first use.
   PNG downloads are made in the browser from that SVG.
-* The diagram API lives in [`lambda/`](lambda/README.md) and is set up manually in the AWS Lambda console. openrvdas-diagram itself stays a standalone command line tool.
+* The diagram API lives in [`lambda/`](lambda/README.md). Only the API Gateway HTTP API may invoke the Lambda; it has no public address of its own. openrvdas-diagram itself stays a standalone command line tool.
+* Everything runs in AWS region `us-west-2` and was set up manually in the AWS console. The backend resources are described in [lambda/README.md](lambda/README.md#deployed-infrastructure).
 
 ## Local Development Setup
 ### Requirements:
@@ -31,8 +32,16 @@ Lambda Function URL  →  Lambda (lambda/: pure Python + openrvdas-diagram)
 3) Run the development server with `npm run dev`. In development the site calls the API at `http://localhost:3001` unless `NEXT_PUBLIC_DIAGRAM_API_URL` is set.
 4) Open [http://localhost:3000](http://localhost:3000) in a browser
 
-## Deploying
-1) Set up the diagram Lambda and its Function URL (see [lambda/README.md](lambda/README.md#deploying)) and copy the Function URL.
-2) In the Amplify console, connect this repository. `amplify.yml` builds the static site into `out/`.
-3) Set the Amplify environment variable `NEXT_PUBLIC_DIAGRAM_API_URL` to the Function URL, and redeploy. The value is baked in at build time.
-4) Make sure the Function URL's CORS allowed origins include the Amplify domain.
+## Hosting
+The site is hosted on AWS Amplify at [https://main.d25weeqazuz5d2.amplifyapp.com](https://main.d25weeqazuz5d2.amplifyapp.com).
+
+* The Amplify app builds the `main` branch of this repository on every push. `amplify.yml` runs `npm ci` and
+  `npm run build` and serves the static export from `out/`.
+* The app is set up as a static site (platform `WEB`, framework "Next.js - SSG"), since there is no server code.
+* The environment variable `NEXT_PUBLIC_DIAGRAM_API_URL` is set to the HTTP API's Invoke URL,
+  `https://lz16vybqb0.execute-api.us-west-2.amazonaws.com`. It is baked in at build time, so changing it needs a
+  redeploy.
+* If the site's address changes, the new address must also be added to the HTTP API's CORS settings.
+
+Changes to the Lambda or its layer are deployed separately; see
+[lambda/README.md](lambda/README.md#deploying-changes).
