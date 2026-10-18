@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Center, Loader } from "@mantine/core";
+import { Alert, Center, Loader, useComputedColorScheme } from "@mantine/core";
 import { useLocalStorage, useMediaQuery } from "@mantine/hooks";
 import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { DiagramCanvas } from "@/components/diagramWorkspace/DiagramCanvas";
@@ -19,6 +19,8 @@ export default function DiagramWorkspacePage() {
     const router = useRouter();
     const { diagram, restoreSavedDiagram } = useDiagramSession();
     const zoomControlsRef = useRef<ReactZoomPanPinchRef>(null);
+    const canvasElementRef = useRef<HTMLDivElement>(null);
+    const theme = useComputedColorScheme("light");
     const isNarrowScreen = useMediaQuery("(max-width: 48em)") ?? false;
     const [isSettingsOpen, setIsSettingsOpen] = useLocalStorage({ key: "openrvdas-diagram:settings-open", defaultValue: false });
     const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
@@ -37,12 +39,16 @@ export default function DiagramWorkspacePage() {
         return <Center h="60vh"><Loader /></Center>;
     }
 
+    const svg = diagram.svgByTheme[theme];
+    const svgUrl = diagram.svgUrlByTheme[theme];
+
     async function exportPng() {
-        if (!diagram) {
-            return;
-        }
+        // The SVG is transparent, so the PNG gets the background it is shown on
+        const backgroundColor = canvasElementRef.current
+            ? getComputedStyle(canvasElementRef.current).backgroundColor
+            : "white";
         try {
-            downloadBlob(await convertSvgToPngBlob(diagram.svg), `${DOWNLOAD_FILE_STEM}.png`);
+            downloadBlob(await convertSvgToPngBlob(svg, backgroundColor), `${DOWNLOAD_FILE_STEM}.png`);
         } catch (error) {
             console.error(error);
             setExportErrorMessage("The PNG could not be created. Try the SVG export instead.");
@@ -58,7 +64,7 @@ export default function DiagramWorkspacePage() {
                 onZoomIn={() => zoomControlsRef.current?.zoomIn(undefined, ZOOM_ANIMATION_MILLISECONDS)}
                 onZoomOut={() => zoomControlsRef.current?.zoomOut(undefined, ZOOM_ANIMATION_MILLISECONDS)}
                 onFitToScreen={() => zoomControlsRef.current?.fitToView({ animationTime: ZOOM_ANIMATION_MILLISECONDS })}
-                onExportSvg={() => downloadBlob(createSvgBlob(diagram.svg), `${DOWNLOAD_FILE_STEM}.svg`)}
+                onExportSvg={() => downloadBlob(createSvgBlob(svg), `${DOWNLOAD_FILE_STEM}.svg`)}
                 onExportPng={exportPng}
                 onExportGraphml={() => downloadGraphml(diagram.graphml)}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
@@ -69,7 +75,8 @@ export default function DiagramWorkspacePage() {
                 </Alert>
             )}
             <div className={classes.body}>
-                <DiagramCanvas key={diagram.svgUrl} svgUrl={diagram.svgUrl} ref={zoomControlsRef} />
+                {/* Keyed by diagram, not theme, so switching theme swaps the image and keeps zoom and pan */}
+                <DiagramCanvas key={diagram.id} svgUrl={svgUrl} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
                 <SettingsPanel isOpen={isSettingsOpen} isNarrowScreen={isNarrowScreen} onClose={() => setIsSettingsOpen(false)} />
             </div>
         </div>

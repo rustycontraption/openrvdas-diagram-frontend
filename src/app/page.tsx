@@ -6,6 +6,7 @@ import { Alert, Button, Container, FileInput, Stack, Text, Title } from "@mantin
 import classes from "@/components/Page.module.css";
 import { requestDiagram } from "@/diagramApi/client";
 import { DiagramApiError, type YamlFile } from "@/diagramApi/types";
+import { COLOR_SCHEME_BY_THEME } from "@/diagramRendering/colorSchemes";
 import { describeUpload, useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
 
 const YAML_FILE_TYPES = ".yml,.yaml";
@@ -42,9 +43,13 @@ export default function Home() {
             const result = await requestDiagram({
                 configFiles: await readYamlFiles(configFiles),
                 templateFiles: await readYamlFiles(templateFiles),
+                colorSchemes: Object.values(COLOR_SCHEME_BY_THEME),
             });
             await showDiagram({
-                dot: result.dot,
+                dotByTheme: {
+                    light: result.dotByColorScheme[COLOR_SCHEME_BY_THEME.light],
+                    dark: result.dotByColorScheme[COLOR_SCHEME_BY_THEME.dark],
+                },
                 graphml: result.graphml,
                 summary: describeUpload(configFiles.length, templateFiles.length),
             });

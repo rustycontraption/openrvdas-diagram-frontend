@@ -15,6 +15,9 @@ API Gateway HTTP API  →  Lambda (lambda/: pure Python + openrvdas-diagram, pri
 * The Lambda returns Graphviz DOT text. The browser lays it out and draws it as SVG with Graphviz compiled to
   WebAssembly ([`@hpcc-js/wasm-graphviz`](https://www.npmjs.com/package/@hpcc-js/wasm-graphviz)), loaded on first use.
   PNG downloads are made in the browser from that SVG.
+* Colors come from openrvdas-diagram's color schemes. The site asks the API for `classic-light` and `classic-dark` and
+  shows the one matching the site's light/dark theme, so switching theme swaps the diagram instantly. The SVG has a
+  transparent background; PNG downloads are filled with the background the diagram is shown on.
 * The diagram API lives in [`lambda/`](lambda/README.md). Only the API Gateway HTTP API may invoke the Lambda; it has no public address of its own. openrvdas-diagram itself stays a standalone command line tool.
 * Everything runs in AWS region `us-west-2` and was set up manually in the AWS console. The backend resources are described in [lambda/README.md](lambda/README.md#deployed-infrastructure).
 
