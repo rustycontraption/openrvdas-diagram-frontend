@@ -8,11 +8,13 @@ export interface YamlFile {
 export interface DiagramRequest {
     configFiles: YamlFile[];
     templateFiles: YamlFile[];
+    /** The openrvdas-diagram color schemes to draw; DOT comes back for just these */
+    colorSchemes: string[];
 }
 
 export interface DiagramResult {
-    /** Graphviz DOT source, laid out and drawn in the browser */
-    dot: string;
+    /** Graphviz DOT source for each requested color scheme, laid out and drawn in the browser */
+    dotByColorScheme: Record<string, string>;
     graphml: string;
 }
 

@@ -11,15 +11,20 @@ standalone command line tool; everything AWS-specific lives here.
 ```json
 {
   "configFiles":   [{ "name": "ship.yaml", "content": "..." }],
-  "templateFiles": [{ "name": "dsLog_templates.yml", "content": "..." }]
+  "templateFiles": [{ "name": "dsLog_templates.yml", "content": "..." }],
+  "colorSchemes":  ["classic-light", "classic-dark"]
 }
 ```
 
 `templateFiles` is optional. Every name must end in `.yml` or `.yaml`, and the combined size is limited to 4 MB.
 
+`colorSchemes` names the openrvdas-diagram color schemes to draw (`classic-light`, `classic-dark`, `viridis-light`,
+`viridis-dark`), and DOT is returned for just those, so the response doesn't grow with the number of schemes. It is
+optional; without it, only the tool's default scheme (`classic-light`) is returned.
+
 | Status | Body |
 |---|---|
-| 200 | `{ "dot": "digraph {...}", "graphml": "..." }`. The browser lays out and draws the DOT with Graphviz compiled to WebAssembly |
+| 200 | `{ "dotByColorScheme": { "classic-light": "digraph {...}", ... }, "graphml": "..." }`. Each DOT has a transparent background; the browser lays it out and draws it with Graphviz compiled to WebAssembly |
 | 400 | `{ "error": { "code": "invalid_request", "message", "requestId" } }` |
 | 422 | `{ "error": { "code", "message", "details", "requestId" } }`. A problem in the uploaded files, with an openrvdas-diagram error code such as `missing_template_file` |
 | 500 | `{ "error": { "code": "internal_error", "message", "requestId" } }`. Details are only in the CloudWatch log line with the same `requestId` |

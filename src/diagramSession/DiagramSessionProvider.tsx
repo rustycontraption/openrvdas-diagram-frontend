@@ -1,20 +1,34 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { DIAGRAM_THEMES, type DiagramTheme } from "@/diagramRendering/colorSchemes";
 import { createSvgBlob, renderSvg } from "@/diagramRendering/graphvizRenderer";
 
 const SAVED_DIAGRAM_STORAGE_KEY = "openrvdas-diagram:last-diagram";
 
+type ByTheme<Value> = Record<DiagramTheme, Value>;
+
 export interface Diagram {
-    svg: string;
-    svgUrl: string;
-    dot: string;
+    /** Changes for every new diagram, but not when only the theme changes */
+    id: number;
+    dotByTheme: ByTheme<string>;
+    svgByTheme: ByTheme<string>;
+    svgUrlByTheme: ByTheme<string>;
     graphml: string;
     summary: string;
 }
 
 /** The parts of a diagram that can be saved and redrawn after a page reload. */
-type SavedDiagram = Pick<Diagram, "dot" | "graphml" | "summary">;
+type SavedDiagram = Pick<Diagram, "dotByTheme" | "graphml" | "summary">;
+
+function mapThemes<Value>(valueForTheme: (theme: DiagramTheme) => Value): ByTheme<Value> {
+    return Object.fromEntries(DIAGRAM_THEMES.map((theme) => [theme, valueForTheme(theme)])) as ByTheme<Value>;
+}
+
+function isSavedDiagram(value: unknown): value is SavedDiagram {
+    const dotByTheme = (value as Partial<SavedDiagram> | null)?.dotByTheme;
+    return DIAGRAM_THEMES.every((theme) => typeof dotByTheme?.[theme] === "string");
+}
 
 interface DiagramSession {
     configFiles: File[];
@@ -47,7 +61,9 @@ function saveDiagram(savedDiagram: SavedDiagram) {
 function loadSavedDiagram(): SavedDiagram | null {
     try {
         const storedText = sessionStorage.getItem(SAVED_DIAGRAM_STORAGE_KEY);
-        return storedText ? JSON.parse(storedText) : null;
+        const storedDiagram = storedText ? JSON.parse(storedText) : null;
+        // Diagrams saved by an older version of the site have no per-theme DOT and can't be redrawn
+        return isSavedDiagram(storedDiagram) ? storedDiagram : null;
     } catch {
         return null;
     }
@@ -61,19 +77,27 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
     const [configFiles, setConfigFiles] = useState<File[]>([]);
     const [templateFiles, setTemplateFiles] = useState<File[]>([]);
     const [diagram, setDiagram] = useState<Diagram | null>(null);
+    const nextDiagramId = useRef(1);
 
-    // Release the previous SVG's object URL whenever the diagram is replaced
+    // Release the previous SVGs' object URLs whenever the diagram is replaced
     useEffect(() => {
         return () => {
             if (diagram) {
-                URL.revokeObjectURL(diagram.svgUrl);
+                DIAGRAM_THEMES.forEach((theme) => URL.revokeObjectURL(diagram.svgUrlByTheme[theme]));
             }
         };
     }, [diagram]);
 
+    // Both themes are drawn up front, so switching the site theme swaps the image instantly
     const showDiagram = useCallback(async (savedDiagram: SavedDiagram) => {
-        const svg = await renderSvg(savedDiagram.dot);
-        setDiagram({ ...savedDiagram, svg, svgUrl: URL.createObjectURL(createSvgBlob(svg)) });
+        const renderedSvgs = await Promise.all(DIAGRAM_THEMES.map((theme) => renderSvg(savedDiagram.dotByTheme[theme])));
+        const svgByTheme = mapThemes((theme) => renderedSvgs[DIAGRAM_THEMES.indexOf(theme)]);
+        setDiagram({
+            ...savedDiagram,
+            id: nextDiagramId.current++,
+            svgByTheme,
+            svgUrlByTheme: mapThemes((theme) => URL.createObjectURL(createSvgBlob(svgByTheme[theme]))),
+        });
         saveDiagram(savedDiagram);
     }, []);
 

@@ -30,7 +30,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /** Draws the SVG onto a canvas and exports it, scaled up so the PNG stays sharp. */
-export async function convertSvgToPngBlob(svg: string, scale = 2): Promise<Blob> {
+export async function convertSvgToPngBlob(svg: string, backgroundColor: string, scale = 2): Promise<Blob> {
     const svgUrl = URL.createObjectURL(createSvgBlob(svg));
     try {
         const image = await loadImage(svgUrl);
@@ -41,7 +41,7 @@ export async function convertSvgToPngBlob(svg: string, scale = 2): Promise<Blob>
         if (!context) {
             throw new Error("This browser cannot draw to a canvas.");
         }
-        context.fillStyle = "white";
+        context.fillStyle = backgroundColor;
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         return await new Promise<Blob>((resolve, reject) => {

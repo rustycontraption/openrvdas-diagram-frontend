@@ -47,12 +47,10 @@
     height: 100% !important;
 }
 
+/* The diagram SVG has a transparent background, so it sits directly on the themed canvas */
 .diagramImage {
     display: block;
     max-width: none;
-    background-color: white;
-    border-radius: var(--mantine-radius-sm);
-    box-shadow: var(--mantine-shadow-sm);
     user-select: none;
 }
 

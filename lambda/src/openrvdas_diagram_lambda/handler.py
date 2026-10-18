@@ -1,6 +1,8 @@
 """AWS Lambda entry point: turns uploaded OpenRVDAS YAMLs into generic GraphML and Graphviz DOT.
 
 The browser lays out and draws the DOT itself, so no Graphviz binary is needed here.
+The request names the color schemes it wants, and DOT is returned for just those,
+so the response size doesn't grow with the number of schemes the tool offers.
 
 Invoked by an API Gateway HTTP API (payload format 2.0). CORS is configured on the API, not here.
 """
@@ -13,6 +15,7 @@ import tempfile
 import traceback
 from pathlib import Path
 
+from openrvdas_diagram.color_schemes import COLOR_SCHEMES, DEFAULT_COLOR_SCHEME_NAME, get_color_scheme
 from openrvdas_diagram.errors import UserInputError
 from openrvdas_diagram.graphml_builder import GRAPHML_FORMAT_GENERIC, GraphmlBuilder
 from openrvdas_diagram.graphml_renderer import GraphmlRenderer
@@ -68,8 +71,24 @@ def is_yaml_file_list(value):
     )
 
 
+def validate_color_scheme_names(color_scheme_names):
+    if color_scheme_names is None:
+        # Requests from before color schemes existed get the tool's default scheme
+        return [DEFAULT_COLOR_SCHEME_NAME]
+    if not isinstance(color_scheme_names, list) or not color_scheme_names:
+        raise InvalidRequestError("colorSchemes must be a non-empty list of color scheme names.")
+    unknown_names = [name for name in color_scheme_names if name not in COLOR_SCHEMES]
+    if unknown_names:
+        raise InvalidRequestError(
+            f"Unknown color schemes: {', '.join(map(str, unknown_names))}. Valid names are: {', '.join(COLOR_SCHEMES)}."
+        )
+    if len(set(color_scheme_names)) != len(color_scheme_names):
+        raise InvalidRequestError("colorSchemes must not name the same color scheme twice.")
+    return color_scheme_names
+
+
 def validate_request(body):
-    """Returns (config_files, template_files), or raises InvalidRequestError."""
+    """Returns (config_files, template_files, color_scheme_names), or raises InvalidRequestError."""
     if not isinstance(body, dict):
         raise InvalidRequestError("Request body must be a JSON object.")
     config_files = body.get("configFiles")
@@ -81,7 +100,7 @@ def validate_request(body):
     total_bytes = sum(len(file["content"].encode("utf-8")) for file in config_files + template_files)
     if total_bytes > MAXIMUM_UPLOAD_BYTES:
         raise InvalidRequestError("Uploaded files are too large. The combined limit is 4 MB.")
-    return config_files, template_files
+    return config_files, template_files, validate_color_scheme_names(body.get("colorSchemes"))
 
 
 def write_yaml_files(directory, files):
@@ -91,7 +110,7 @@ def write_yaml_files(directory, files):
         (directory / Path(file["name"]).name).write_text(file["content"])
 
 
-def generate_diagram(config_files, template_files):
+def generate_diagram(config_files, template_files, color_scheme_names):
     # The tool reads from directories, so files are staged in /tmp, the only writable path in Lambda
     with tempfile.TemporaryDirectory() as working_directory:
         config_dir = Path(working_directory) / CONFIG_DIRECTORY_NAME
@@ -100,7 +119,11 @@ def generate_diagram(config_files, template_files):
         write_yaml_files(template_dir, template_files)
         inventory = LoggerInventoryBuilder().collectAndParseLoggers(config_dir=config_dir, template_dir=template_dir)
     graphml = GraphmlBuilder(inventory, graphml_format=GRAPHML_FORMAT_GENERIC).to_xml()
-    return {"dot": GraphmlRenderer(graphml).to_dot(), "graphml": graphml}
+    dot_by_color_scheme = {
+        name: GraphmlRenderer(graphml, color_scheme=get_color_scheme(name)).to_dot()
+        for name in color_scheme_names
+    }
+    return {"dotByColorScheme": dot_by_color_scheme, "graphml": graphml}
 
 
 def log_unexpected_error(request_id, error):
@@ -115,8 +138,8 @@ def log_unexpected_error(request_id, error):
 def handle(event, context):
     request_id = context.aws_request_id
     try:
-        config_files, template_files = validate_request(read_request_body(event))
-        return json_response(200, generate_diagram(config_files, template_files))
+        config_files, template_files, color_scheme_names = validate_request(read_request_body(event))
+        return json_response(200, generate_diagram(config_files, template_files, color_scheme_names))
     except InvalidRequestError as error:
         return error_response(400, request_id, "invalid_request", str(error))
     except UserInputError as error:
