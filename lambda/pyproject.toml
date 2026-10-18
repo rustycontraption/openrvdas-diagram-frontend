@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openrvdas-diagram-lambda"
-version = "0.1.0"
+version = "0.2.0"
 description = "AWS Lambda wrapper that serves openrvdas-diagram to the openrvdas-diagram-site frontend"
 requires-python = ">=3.12"
 dynamic = ["dependencies"]
