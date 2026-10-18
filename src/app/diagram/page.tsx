@@ -9,6 +9,8 @@ import { DiagramCanvas } from "@/components/diagramWorkspace/DiagramCanvas";
 import { SettingsPanel } from "@/components/diagramWorkspace/SettingsPanel";
 import { WorkspaceToolbar } from "@/components/diagramWorkspace/WorkspaceToolbar";
 import classes from "@/components/diagramWorkspace/DiagramWorkspace.module.css";
+import { toDisplayedError } from "@/diagramApi/displayedError";
+import type { ColorSchemeFamily } from "@/diagramRendering/colorSchemes";
 import { DOWNLOAD_FILE_STEM, downloadBlob, downloadGraphml } from "@/diagramRendering/downloads";
 import { convertSvgToPngBlob, createSvgBlob } from "@/diagramRendering/graphvizRenderer";
 import { useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
@@ -17,13 +19,13 @@ const ZOOM_ANIMATION_MILLISECONDS = 200;
 
 export default function DiagramWorkspacePage() {
     const router = useRouter();
-    const { diagram, restoreSavedDiagram } = useDiagramSession();
+    const { diagram, restoreSavedDiagram, changeColorSchemeFamily, isChangingColorScheme, canChangeColorScheme } = useDiagramSession();
     const zoomControlsRef = useRef<ReactZoomPanPinchRef>(null);
     const canvasElementRef = useRef<HTMLDivElement>(null);
     const theme = useComputedColorScheme("light");
     const isNarrowScreen = useMediaQuery("(max-width: 48em)") ?? false;
     const [isSettingsOpen, setIsSettingsOpen] = useLocalStorage({ key: "openrvdas-diagram:settings-open", defaultValue: false });
-    const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
+    const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState<string | null>(null);
 
     // Arriving here without a diagram (a reload or a shared link) restores the last one, or returns to the upload page
     useEffect(() => {
@@ -51,7 +53,16 @@ export default function DiagramWorkspacePage() {
             downloadBlob(await convertSvgToPngBlob(svg, backgroundColor), `${DOWNLOAD_FILE_STEM}.png`);
         } catch (error) {
             console.error(error);
-            setExportErrorMessage("The PNG could not be created. Try the SVG export instead.");
+            setWorkspaceErrorMessage("The PNG could not be created. Try the SVG export instead.");
+        }
+    }
+
+    async function changeColorScheme(colorSchemeFamily: ColorSchemeFamily) {
+        setWorkspaceErrorMessage(null);
+        try {
+            await changeColorSchemeFamily(colorSchemeFamily);
+        } catch (error) {
+            setWorkspaceErrorMessage(`The color scheme could not be changed. ${toDisplayedError(error).message}`);
         }
     }
 
@@ -69,15 +80,23 @@ export default function DiagramWorkspacePage() {
                 onExportGraphml={() => downloadGraphml(diagram.graphml)}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
             />
-            {exportErrorMessage && (
-                <Alert color="red" withCloseButton onClose={() => setExportErrorMessage(null)} radius={0}>
-                    {exportErrorMessage}
+            {workspaceErrorMessage && (
+                <Alert color="red" withCloseButton onClose={() => setWorkspaceErrorMessage(null)} radius={0}>
+                    {workspaceErrorMessage}
                 </Alert>
             )}
             <div className={classes.body}>
                 {/* Keyed by diagram, not theme, so switching theme swaps the image and keeps zoom and pan */}
                 <DiagramCanvas key={diagram.id} svgUrl={svgUrl} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
-                <SettingsPanel isOpen={isSettingsOpen} isNarrowScreen={isNarrowScreen} onClose={() => setIsSettingsOpen(false)} />
+                <SettingsPanel
+                    isOpen={isSettingsOpen}
+                    isNarrowScreen={isNarrowScreen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    colorSchemeFamily={diagram.colorSchemeFamily}
+                    onColorSchemeFamilyChange={changeColorScheme}
+                    isChangingColorScheme={isChangingColorScheme}
+                    canChangeColorScheme={canChangeColorScheme}
+                />
             </div>
         </div>
     );
