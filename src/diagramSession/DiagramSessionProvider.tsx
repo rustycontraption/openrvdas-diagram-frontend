@@ -20,7 +20,6 @@ const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
 type ByTheme<Value> = Record<DiagramTheme, Value>;
 
 export interface Diagram {
-    /** Changes for every new diagram, but not when only the theme or color scheme changes */
     id: number;
     colorSchemeFamily: ColorSchemeFamily;
     dotByTheme: ByTheme<string>;
@@ -30,11 +29,9 @@ export interface Diagram {
     summary: string;
 }
 
-/** The parts of a diagram that can be saved and redrawn after a page reload. */
 type SavedDiagram = Pick<Diagram, "colorSchemeFamily" | "dotByTheme" | "graphml" | "summary">;
 
 interface ShowDiagramOptions {
-    /** Keep the canvas's zoom and pan, for when only the color scheme changes */
     keepView?: boolean;
 }
 
@@ -43,18 +40,12 @@ interface DiagramSession {
     templateFiles: File[];
     setConfigFiles: (files: File[]) => void;
     setTemplateFiles: (files: File[]) => void;
-    /** The color scheme family chosen in this browser, used for the next diagram */
     colorSchemeFamily: ColorSchemeFamily;
-    /**
-     * The files the diagram was generated from are still selected. Changing the color scheme and exporting
-     * for yEd re-send them, so both need it; they are gone after a page reload.
-     */
     hasSelectedFiles: boolean;
     isChangingColorScheme: boolean;
     diagram: Diagram | null;
     generateDiagram: (colorSchemeFamily: ColorSchemeFamily, options?: ShowDiagramOptions) => Promise<void>;
     changeColorSchemeFamily: (colorSchemeFamily: ColorSchemeFamily) => Promise<void>;
-    /** Asks the API for the selected files' diagram as yEd GraphML */
     requestYedGraphml: () => Promise<string>;
     restoreSavedDiagram: () => Promise<boolean>;
 }
@@ -95,20 +86,12 @@ function loadSavedDiagram(): SavedDiagram | null {
     try {
         const storedText = sessionStorage.getItem(SAVED_DIAGRAM_STORAGE_KEY);
         const storedDiagram = storedText ? JSON.parse(storedText) : null;
-        // Diagrams saved by an older version of the site lack per-theme DOT or a color scheme and can't be redrawn
         return isSavedDiagram(storedDiagram) ? storedDiagram : null;
     } catch {
         return null;
     }
 }
 
-/**
- * Shares the chosen files and the generated diagram between the upload page and the diagram workspace,
- * so going back to edit the files keeps them selected.
- *
- * Only the current color scheme's diagram is kept in memory; changing scheme fetches the new one and
- * frees the old, so memory use doesn't grow with the number of schemes.
- */
 export function DiagramSessionProvider({ children }: { children: React.ReactNode }) {
     const [configFiles, setConfigFiles] = useState<File[]>([]);
     const [templateFiles, setTemplateFiles] = useState<File[]>([]);
@@ -124,7 +107,6 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
     // Only the most recent request may replace the diagram, in case scheme changes overlap
     const latestRequestNumber = useRef(0);
 
-    // Release the previous SVGs' object URLs whenever the diagram is replaced
     useEffect(() => {
         return () => {
             if (diagram) {
@@ -133,7 +115,6 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         };
     }, [diagram]);
 
-    // Both themes are drawn up front, so switching the site theme swaps the image instantly
     const showDiagram = useCallback(async (savedDiagram: SavedDiagram, { keepView = false }: ShowDiagramOptions = {}) => {
         const renderedSvgs = await Promise.all(DIAGRAM_THEMES.map((theme) => renderSvg(savedDiagram.dotByTheme[theme])));
         const svgByTheme = mapThemes((theme) => renderedSvgs[DIAGRAM_THEMES.indexOf(theme)]);

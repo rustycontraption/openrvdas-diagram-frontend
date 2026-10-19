@@ -2,7 +2,6 @@ import { ApiErrorResponse, ErrorDetails } from "./types";
 
 type MessageBuilder = (details: ErrorDetails) => string;
 
-// Website wording for each openrvdas-diagram error code. Codes not listed here fall back to the API's own message.
 const MESSAGE_BUILDERS_BY_CODE: Partial<Record<string, MessageBuilder>> = {
     missing_template_file: (details) =>
         `${details.config_file} includes ${details.template_file}, which wasn't uploaded. ` +

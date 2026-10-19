@@ -6,7 +6,6 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { DiagramSessionProvider } from "@/diagramSession/DiagramSessionProvider";
 
-// The diagram workspace fills the window, so it skips the page padding and footer
 const FULL_WINDOW_PATHS = ["/diagram"];
 
 const theme = createTheme({
@@ -34,10 +33,6 @@ const resolver: CSSVariablesResolver = (theme) => ({
   },
 });
 
-/**
- * Everything in the page frame that needs the browser: Mantine theming, the shared diagram session,
- * and the header/footer layout that depends on the current path.
- */
 export default function AppProviders({
   children,
 }: Readonly<{

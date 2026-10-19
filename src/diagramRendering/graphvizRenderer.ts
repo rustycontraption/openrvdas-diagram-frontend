@@ -29,7 +29,6 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     });
 }
 
-/** Draws the SVG onto a canvas and exports it, scaled up so the PNG stays sharp. */
 export async function convertSvgToPngBlob(svg: string, backgroundColor: string, scale = 2): Promise<Blob> {
     const svgUrl = URL.createObjectURL(createSvgBlob(svg));
     try {

@@ -3,7 +3,6 @@ import { userMessageFor } from "./userMessages";
 
 // Matches the diagram API's limit, so oversized uploads fail fast without a round trip
 const MAXIMUM_UPLOAD_BYTES = 4 * 1024 * 1024;
-// Where lambda/'s local server (python -m openrvdas_diagram_lambda.local_server) listens during `npm run dev`
 const LOCAL_DEVELOPMENT_API_URL = "http://localhost:3001";
 
 function diagramEndpoint(): string {

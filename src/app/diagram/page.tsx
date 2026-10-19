@@ -30,7 +30,6 @@ export default function DiagramWorkspacePage() {
     const [isSettingsOpen, setIsSettingsOpen] = useLocalStorage({ key: "openrvdas-diagram:settings-open", defaultValue: false });
     const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState<string | null>(null);
 
-    // Arriving here without a diagram (a reload or a shared link) restores the last one, or returns to the upload page
     useEffect(() => {
         if (diagram) {
             return;

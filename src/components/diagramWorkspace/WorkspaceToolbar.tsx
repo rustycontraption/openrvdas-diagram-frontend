@@ -13,7 +13,6 @@ interface WorkspaceToolbarProps {
     onExportPng: () => void;
     onExportGraphml: () => void;
     onExportYed: () => void;
-    /** Exporting for yEd re-sends the uploaded files, which are gone after a page reload */
     canExportYed: boolean;
     onToggleSettings: () => void;
 }

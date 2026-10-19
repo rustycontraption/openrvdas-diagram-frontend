@@ -2,7 +2,6 @@ import { Raleway } from "next/font/google";
 import AppProviders from "./AppProviders";
 
 import "./globals.css";
-// core styles are required for all packages
 import '@mantine/core/styles.css';
 import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
 

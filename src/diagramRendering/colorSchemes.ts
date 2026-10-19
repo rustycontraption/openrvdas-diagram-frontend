@@ -4,10 +4,6 @@ export const DIAGRAM_THEMES: DiagramTheme[] = ["light", "dark"];
 
 export type ColorSchemeFamily = "classic" | "viridis";
 
-/**
- * The openrvdas-diagram color schemes in each family, one per site theme.
- * This is the only place the site names color schemes; the colors themselves come from the tool.
- */
 export const COLOR_SCHEMES_BY_FAMILY: Record<ColorSchemeFamily, Record<DiagramTheme, string>> = {
     classic: { light: "classic-light", dark: "classic-dark" },
     viridis: { light: "viridis-light", dark: "viridis-dark" },

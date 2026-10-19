@@ -1,13 +1,3 @@
-"""AWS Lambda entry point: turns uploaded OpenRVDAS YAMLs into GraphML and Graphviz DOT.
-
-The browser lays out and draws the DOT itself, so no Graphviz binary is needed here.
-The request names the color schemes it wants, and DOT is returned for just those,
-so the response size doesn't grow with the number of schemes the tool offers.
-The request can also ask for the GraphML in yEd format instead of generic GraphML.
-
-Invoked by an API Gateway HTTP API (payload format 2.0). CORS is configured on the API, not here.
-"""
-
 import base64
 import json
 import logging
@@ -99,7 +89,6 @@ def validate_graphml_format(graphml_format):
 
 
 def validate_request(body):
-    """Returns (config_files, template_files, color_scheme_names, graphml_format), or raises InvalidRequestError."""
     if not isinstance(body, dict):
         raise InvalidRequestError("Request body must be a JSON object.")
     config_files = body.get("configFiles")

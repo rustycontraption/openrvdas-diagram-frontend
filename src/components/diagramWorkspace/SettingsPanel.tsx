@@ -35,7 +35,6 @@ function SettingsContent({ colorSchemeFamily, onColorSchemeFamilyChange, isChang
     );
 }
 
-/** A side column on wide screens, and a slide-over drawer on narrow ones so the diagram keeps its space. */
 export function SettingsPanel({ isOpen, isNarrowScreen, onClose, ...settings }: SettingsPanelProps) {
     if (isNarrowScreen) {
         return (

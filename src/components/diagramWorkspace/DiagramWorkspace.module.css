@@ -1,4 +1,3 @@
-/* The workspace fills the window below the sticky 56px header */
 .workspace {
     height: calc(100dvh - 56px);
     display: flex;
@@ -47,7 +46,6 @@
     height: 100% !important;
 }
 
-/* The diagram SVG has a transparent background, so it sits directly on the themed canvas */
 .diagramImage {
     display: block;
     max-width: none;
