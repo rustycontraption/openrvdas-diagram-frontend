@@ -6,6 +6,7 @@ import { Alert, Center, Loader, useComputedColorScheme } from "@mantine/core";
 import { useLocalStorage, useMediaQuery } from "@mantine/hooks";
 import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { DiagramCanvas } from "@/components/diagramWorkspace/DiagramCanvas";
+import { FilesUnavailableNotice } from "@/components/diagramWorkspace/FilesUnavailableNotice";
 import { SettingsPanel } from "@/components/diagramWorkspace/SettingsPanel";
 import { WorkspaceToolbar } from "@/components/diagramWorkspace/WorkspaceToolbar";
 import classes from "@/components/diagramWorkspace/DiagramWorkspace.module.css";
@@ -20,8 +21,7 @@ const ZOOM_ANIMATION_MILLISECONDS = 200;
 export default function DiagramWorkspacePage() {
     const router = useRouter();
     const {
-        diagram, restoreSavedDiagram, changeColorSchemeFamily, isChangingColorScheme, canChangeColorScheme,
-        canExportYed, requestYedGraphml,
+        diagram, restoreSavedDiagram, changeColorSchemeFamily, isChangingColorScheme, hasSelectedFiles, requestYedGraphml,
     } = useDiagramSession();
     const zoomControlsRef = useRef<ReactZoomPanPinchRef>(null);
     const canvasElementRef = useRef<HTMLDivElement>(null);
@@ -91,9 +91,10 @@ export default function DiagramWorkspacePage() {
                 onExportPng={exportPng}
                 onExportGraphml={() => downloadGraphml(diagram.graphml)}
                 onExportYed={exportYedGraphml}
-                canExportYed={canExportYed}
+                canExportYed={hasSelectedFiles}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
             />
+            {!hasSelectedFiles && <FilesUnavailableNotice onAddFiles={() => router.push("/")} />}
             {workspaceErrorMessage && (
                 <Alert color="red" withCloseButton onClose={() => setWorkspaceErrorMessage(null)} radius={0}>
                     {workspaceErrorMessage}
@@ -109,7 +110,7 @@ export default function DiagramWorkspacePage() {
                     colorSchemeFamily={diagram.colorSchemeFamily}
                     onColorSchemeFamilyChange={changeColorScheme}
                     isChangingColorScheme={isChangingColorScheme}
-                    canChangeColorScheme={canChangeColorScheme}
+                    canChangeColorScheme={hasSelectedFiles}
                 />
             </div>
         </div>

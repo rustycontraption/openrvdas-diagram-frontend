@@ -30,11 +30,7 @@ function SettingsContent({ colorSchemeFamily, onColorSchemeFamilyChange, isChang
                 onChange={(value) => { if (isColorSchemeFamily(value)) onColorSchemeFamilyChange(value); }}
                 disabled={isChangingColorScheme || !canChangeColorScheme}
             />
-            {canChangeColorScheme ? (
-                <Text size="xs" c="dimmed">Light or dark follows the site theme.</Text>
-            ) : (
-                <Text size="xs" c="dimmed">Generate the diagram again to change its color scheme.</Text>
-            )}
+            <Text size="xs" c="dimmed">Light or dark follows the site theme.</Text>
         </Stack>
     );
 }
