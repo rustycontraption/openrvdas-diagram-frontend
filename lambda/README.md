@@ -12,7 +12,8 @@ standalone command line tool; everything AWS-specific lives here.
 {
   "configFiles":   [{ "name": "ship.yaml", "content": "..." }],
   "templateFiles": [{ "name": "dsLog_templates.yml", "content": "..." }],
-  "colorSchemes":  ["classic-light", "classic-dark"]
+  "colorSchemes":  ["classic-light", "classic-dark"],
+  "graphmlFormat": "generic"
 }
 ```
 
@@ -21,6 +22,9 @@ standalone command line tool; everything AWS-specific lives here.
 `colorSchemes` names the openrvdas-diagram color schemes to draw (`classic-light`, `classic-dark`, `viridis-light`,
 `viridis-dark`), and DOT is returned for just those, so the response doesn't grow with the number of schemes. It is
 optional; without it, only the tool's default scheme (`classic-light`) is returned.
+
+`graphmlFormat` is `generic` (the default) or `yed`, and sets the format of the `graphml` in the response. The DOT is
+always drawn from generic GraphML.
 
 | Status | Body |
 |---|---|

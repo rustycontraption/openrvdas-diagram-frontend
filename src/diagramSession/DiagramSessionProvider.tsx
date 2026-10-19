@@ -45,12 +45,17 @@ interface DiagramSession {
     setTemplateFiles: (files: File[]) => void;
     /** The color scheme family chosen in this browser, used for the next diagram */
     colorSchemeFamily: ColorSchemeFamily;
-    /** Changing the color scheme re-sends the files, so it is only possible while they are still selected */
-    canChangeColorScheme: boolean;
+    /**
+     * The files the diagram was generated from are still selected. Changing the color scheme and exporting
+     * for yEd re-send them, so both need it; they are gone after a page reload.
+     */
+    hasSelectedFiles: boolean;
     isChangingColorScheme: boolean;
     diagram: Diagram | null;
     generateDiagram: (colorSchemeFamily: ColorSchemeFamily, options?: ShowDiagramOptions) => Promise<void>;
     changeColorSchemeFamily: (colorSchemeFamily: ColorSchemeFamily) => Promise<void>;
+    /** Asks the API for the selected files' diagram as yEd GraphML */
+    requestYedGraphml: () => Promise<string>;
     restoreSavedDiagram: () => Promise<boolean>;
 }
 
@@ -162,11 +167,11 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         }, options);
     }, [configFiles, templateFiles, showDiagram]);
 
-    const canChangeColorScheme = configFiles.length > 0;
+    const hasSelectedFiles = configFiles.length > 0;
 
     const changeColorSchemeFamily = useCallback(async (family: ColorSchemeFamily) => {
         setStoredColorSchemeFamily(family);
-        if (!canChangeColorScheme) {
+        if (!hasSelectedFiles) {
             return;
         }
         setIsChangingColorScheme(true);
@@ -175,7 +180,19 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         } finally {
             setIsChangingColorScheme(false);
         }
-    }, [canChangeColorScheme, generateDiagram, setStoredColorSchemeFamily]);
+    }, [hasSelectedFiles, generateDiagram, setStoredColorSchemeFamily]);
+
+    const requestYedGraphml = useCallback(async () => {
+        const family = diagram?.colorSchemeFamily ?? colorSchemeFamily;
+        const result = await requestDiagram({
+            configFiles: await readYamlFiles(configFiles),
+            templateFiles: await readYamlFiles(templateFiles),
+            // The API always draws at least one scheme; only the GraphML is used here
+            colorSchemes: [COLOR_SCHEMES_BY_FAMILY[family].light],
+            graphmlFormat: "yed",
+        });
+        return result.graphml;
+    }, [configFiles, templateFiles, diagram, colorSchemeFamily]);
 
     const restoreSavedDiagram = useCallback(async () => {
         const savedDiagram = loadSavedDiagram();
@@ -192,15 +209,16 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         setConfigFiles,
         setTemplateFiles,
         colorSchemeFamily,
-        canChangeColorScheme,
+        hasSelectedFiles,
         isChangingColorScheme,
         diagram,
         generateDiagram,
         changeColorSchemeFamily,
+        requestYedGraphml,
         restoreSavedDiagram,
     }), [
-        configFiles, templateFiles, colorSchemeFamily, canChangeColorScheme, isChangingColorScheme,
-        diagram, generateDiagram, changeColorSchemeFamily, restoreSavedDiagram,
+        configFiles, templateFiles, colorSchemeFamily, hasSelectedFiles, isChangingColorScheme,
+        diagram, generateDiagram, changeColorSchemeFamily, requestYedGraphml, restoreSavedDiagram,
     ]);
 
     return <DiagramSessionContext.Provider value={session}>{children}</DiagramSessionContext.Provider>;

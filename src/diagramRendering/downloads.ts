@@ -14,3 +14,8 @@ export function downloadBlob(blob: Blob, fileName: string) {
 export function downloadGraphml(graphml: string) {
     downloadBlob(new Blob([graphml], { type: GRAPHML_MIME_TYPE }), `${DOWNLOAD_FILE_STEM}.graphml`);
 }
+
+/** Downloads yEd-format GraphML, which opens in yEd or yEd Live (File → Open, or drag it onto the page). */
+export function exportYed(yedGraphml: string) {
+    downloadBlob(new Blob([yedGraphml], { type: GRAPHML_MIME_TYPE }), `${DOWNLOAD_FILE_STEM}-yed.graphml`);
+}
