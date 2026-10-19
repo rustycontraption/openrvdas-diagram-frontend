@@ -11,7 +11,7 @@ import { WorkspaceToolbar } from "@/components/diagramWorkspace/WorkspaceToolbar
 import classes from "@/components/diagramWorkspace/DiagramWorkspace.module.css";
 import { toDisplayedError } from "@/diagramApi/displayedError";
 import type { ColorSchemeFamily } from "@/diagramRendering/colorSchemes";
-import { DOWNLOAD_FILE_STEM, downloadBlob, downloadGraphml } from "@/diagramRendering/downloads";
+import { DOWNLOAD_FILE_STEM, downloadBlob, downloadGraphml, exportYed } from "@/diagramRendering/downloads";
 import { convertSvgToPngBlob, createSvgBlob } from "@/diagramRendering/graphvizRenderer";
 import { useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
 
@@ -19,7 +19,10 @@ const ZOOM_ANIMATION_MILLISECONDS = 200;
 
 export default function DiagramWorkspacePage() {
     const router = useRouter();
-    const { diagram, restoreSavedDiagram, changeColorSchemeFamily, isChangingColorScheme, canChangeColorScheme } = useDiagramSession();
+    const {
+        diagram, restoreSavedDiagram, changeColorSchemeFamily, isChangingColorScheme, canChangeColorScheme,
+        canExportYed, requestYedGraphml,
+    } = useDiagramSession();
     const zoomControlsRef = useRef<ReactZoomPanPinchRef>(null);
     const canvasElementRef = useRef<HTMLDivElement>(null);
     const theme = useComputedColorScheme("light");
@@ -66,6 +69,15 @@ export default function DiagramWorkspacePage() {
         }
     }
 
+    async function exportYedGraphml() {
+        setWorkspaceErrorMessage(null);
+        try {
+            exportYed(await requestYedGraphml());
+        } catch (error) {
+            setWorkspaceErrorMessage(`The yEd file could not be created. ${toDisplayedError(error).message}`);
+        }
+    }
+
     return (
         <div className={classes.workspace}>
             <WorkspaceToolbar
@@ -78,6 +90,8 @@ export default function DiagramWorkspacePage() {
                 onExportSvg={() => downloadBlob(createSvgBlob(svg), `${DOWNLOAD_FILE_STEM}.svg`)}
                 onExportPng={exportPng}
                 onExportGraphml={() => downloadGraphml(diagram.graphml)}
+                onExportYed={exportYedGraphml}
+                canExportYed={canExportYed}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
             />
             {workspaceErrorMessage && (

@@ -51,6 +51,10 @@ interface DiagramSession {
     diagram: Diagram | null;
     generateDiagram: (colorSchemeFamily: ColorSchemeFamily, options?: ShowDiagramOptions) => Promise<void>;
     changeColorSchemeFamily: (colorSchemeFamily: ColorSchemeFamily) => Promise<void>;
+    /** Exporting for yEd re-sends the files, so it is only possible while they are still selected */
+    canExportYed: boolean;
+    /** Asks the API for the selected files' diagram as yEd GraphML */
+    requestYedGraphml: () => Promise<string>;
     restoreSavedDiagram: () => Promise<boolean>;
 }
 
@@ -177,6 +181,20 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         }
     }, [canChangeColorScheme, generateDiagram, setStoredColorSchemeFamily]);
 
+    const canExportYed = configFiles.length > 0;
+
+    const requestYedGraphml = useCallback(async () => {
+        const family = diagram?.colorSchemeFamily ?? colorSchemeFamily;
+        const result = await requestDiagram({
+            configFiles: await readYamlFiles(configFiles),
+            templateFiles: await readYamlFiles(templateFiles),
+            // The API always draws at least one scheme; only the GraphML is used here
+            colorSchemes: [COLOR_SCHEMES_BY_FAMILY[family].light],
+            graphmlFormat: "yed",
+        });
+        return result.graphml;
+    }, [configFiles, templateFiles, diagram, colorSchemeFamily]);
+
     const restoreSavedDiagram = useCallback(async () => {
         const savedDiagram = loadSavedDiagram();
         if (!savedDiagram) {
@@ -197,10 +215,12 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         diagram,
         generateDiagram,
         changeColorSchemeFamily,
+        canExportYed,
+        requestYedGraphml,
         restoreSavedDiagram,
     }), [
         configFiles, templateFiles, colorSchemeFamily, canChangeColorScheme, isChangingColorScheme,
-        diagram, generateDiagram, changeColorSchemeFamily, restoreSavedDiagram,
+        diagram, generateDiagram, changeColorSchemeFamily, canExportYed, requestYedGraphml, restoreSavedDiagram,
     ]);
 
     return <DiagramSessionContext.Provider value={session}>{children}</DiagramSessionContext.Provider>;

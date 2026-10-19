@@ -10,6 +10,7 @@ export interface DiagramRequest {
     templateFiles: YamlFile[];
     /** The openrvdas-diagram color schemes to draw; DOT comes back for just these */
     colorSchemes: string[];
+    graphmlFormat?: "generic" | "yed"
 }
 
 export interface DiagramResult {
