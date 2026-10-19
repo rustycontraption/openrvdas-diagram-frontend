@@ -50,3 +50,27 @@ The site is hosted on AWS Amplify at [https://main.d25weeqazuz5d2.amplifyapp.com
 
 Changes to the Lambda or its layer are deployed separately; see
 [lambda/README.md](lambda/README.md#deploying-changes).
+
+## TODO
+
+### Edges with sharp bends on the website
+Some edges are drawn with several sharp bends instead of one smooth curve, mostly edges into destinations with many
+incoming edges (e.g. `winch` and `rov_herc_temp` into `isc-int-as1.gso.uri.edu` with the nautilus datarec and dataxform
+configs).
+
+Cause: the API returns `GraphmlRenderer.to_dot()`, which gives each edge an attachment point on its nodes in config
+order. The CLI's PNG first measures the layout and orders attachment points by position, so its edges stay smooth.
+The GraphML itself is the same in both. Drawing measured DOT with the browser's Graphviz fixes these edges.
+
+Possible fixes:
+* **Measuring pass in the browser:** lay out the DOT once with the browser's Graphviz, reorder each node's attachment
+  points (`:in_N` / `:out_N`) by the measured position of the node at the other end, then lay out again. No AWS
+  changes, but the ordering rule (in openrvdas-diagram's `GraphmlRenderer._edge_port_indexes`) is then also written in
+  TypeScript.
+* **Graphviz in the Lambda layer:** add a `to_dot(measure_layout=True)` option to openrvdas-diagram (also usable from
+  the CLI) and have the Lambda return measured DOT. The layer would need the Graphviz `dot` program, its libraries and
+  plugins, built on Amazon Linux (e.g. in AWS CloudShell), since a copy from another Linux distribution won't run on
+  Lambda.
+
+Related: the order of sources changes between runs (openrvdas-diagram keeps them in a set), so the layout, and where
+this shows up, can differ each time a diagram is generated.
