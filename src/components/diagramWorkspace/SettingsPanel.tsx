@@ -30,7 +30,6 @@ function SettingsContent({ colorSchemeFamily, onColorSchemeFamilyChange, isChang
                 onChange={(value) => { if (isColorSchemeFamily(value)) onColorSchemeFamilyChange(value); }}
                 disabled={isChangingColorScheme || !canChangeColorScheme}
             />
-            <Text size="xs" c="dimmed">Light or dark follows the site theme.</Text>
         </Stack>
     );
 }
