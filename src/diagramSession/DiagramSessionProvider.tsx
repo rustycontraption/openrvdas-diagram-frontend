@@ -1,16 +1,28 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { DIAGRAM_THEMES, type DiagramTheme } from "@/diagramRendering/colorSchemes";
+import { useLocalStorage } from "@mantine/hooks";
+import { requestDiagram } from "@/diagramApi/client";
+import type { YamlFile } from "@/diagramApi/types";
+import {
+    COLOR_SCHEMES_BY_FAMILY,
+    DEFAULT_COLOR_SCHEME_FAMILY,
+    DIAGRAM_THEMES,
+    isColorSchemeFamily,
+    type ColorSchemeFamily,
+    type DiagramTheme,
+} from "@/diagramRendering/colorSchemes";
 import { createSvgBlob, renderSvg } from "@/diagramRendering/graphvizRenderer";
 
 const SAVED_DIAGRAM_STORAGE_KEY = "openrvdas-diagram:last-diagram";
+const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
 
 type ByTheme<Value> = Record<DiagramTheme, Value>;
 
 export interface Diagram {
-    /** Changes for every new diagram, but not when only the theme changes */
+    /** Changes for every new diagram, but not when only the theme or color scheme changes */
     id: number;
+    colorSchemeFamily: ColorSchemeFamily;
     dotByTheme: ByTheme<string>;
     svgByTheme: ByTheme<string>;
     svgUrlByTheme: ByTheme<string>;
@@ -19,15 +31,11 @@ export interface Diagram {
 }
 
 /** The parts of a diagram that can be saved and redrawn after a page reload. */
-type SavedDiagram = Pick<Diagram, "dotByTheme" | "graphml" | "summary">;
+type SavedDiagram = Pick<Diagram, "colorSchemeFamily" | "dotByTheme" | "graphml" | "summary">;
 
-function mapThemes<Value>(valueForTheme: (theme: DiagramTheme) => Value): ByTheme<Value> {
-    return Object.fromEntries(DIAGRAM_THEMES.map((theme) => [theme, valueForTheme(theme)])) as ByTheme<Value>;
-}
-
-function isSavedDiagram(value: unknown): value is SavedDiagram {
-    const dotByTheme = (value as Partial<SavedDiagram> | null)?.dotByTheme;
-    return DIAGRAM_THEMES.every((theme) => typeof dotByTheme?.[theme] === "string");
+interface ShowDiagramOptions {
+    /** Keep the canvas's zoom and pan, for when only the color scheme changes */
+    keepView?: boolean;
 }
 
 interface DiagramSession {
@@ -35,8 +43,14 @@ interface DiagramSession {
     templateFiles: File[];
     setConfigFiles: (files: File[]) => void;
     setTemplateFiles: (files: File[]) => void;
+    /** The color scheme family chosen in this browser, used for the next diagram */
+    colorSchemeFamily: ColorSchemeFamily;
+    /** Changing the color scheme re-sends the files, so it is only possible while they are still selected */
+    canChangeColorScheme: boolean;
+    isChangingColorScheme: boolean;
     diagram: Diagram | null;
-    showDiagram: (savedDiagram: SavedDiagram) => Promise<void>;
+    generateDiagram: (colorSchemeFamily: ColorSchemeFamily, options?: ShowDiagramOptions) => Promise<void>;
+    changeColorSchemeFamily: (colorSchemeFamily: ColorSchemeFamily) => Promise<void>;
     restoreSavedDiagram: () => Promise<boolean>;
 }
 
@@ -48,6 +62,20 @@ function pluralize(count: number, singular: string): string {
 
 export function describeUpload(configCount: number, templateCount: number): string {
     return `${pluralize(configCount, "config file")} · ${pluralize(templateCount, "template file")}`;
+}
+
+function mapThemes<Value>(valueForTheme: (theme: DiagramTheme) => Value): ByTheme<Value> {
+    return Object.fromEntries(DIAGRAM_THEMES.map((theme) => [theme, valueForTheme(theme)])) as ByTheme<Value>;
+}
+
+async function readYamlFiles(files: File[]): Promise<YamlFile[]> {
+    return Promise.all(files.map(async (file) => ({ name: file.name, content: await file.text() })));
+}
+
+function isSavedDiagram(value: unknown): value is SavedDiagram {
+    const savedDiagram = value as Partial<SavedDiagram> | null;
+    return isColorSchemeFamily(savedDiagram?.colorSchemeFamily)
+        && DIAGRAM_THEMES.every((theme) => typeof savedDiagram?.dotByTheme?.[theme] === "string");
 }
 
 function saveDiagram(savedDiagram: SavedDiagram) {
@@ -62,7 +90,7 @@ function loadSavedDiagram(): SavedDiagram | null {
     try {
         const storedText = sessionStorage.getItem(SAVED_DIAGRAM_STORAGE_KEY);
         const storedDiagram = storedText ? JSON.parse(storedText) : null;
-        // Diagrams saved by an older version of the site have no per-theme DOT and can't be redrawn
+        // Diagrams saved by an older version of the site lack per-theme DOT or a color scheme and can't be redrawn
         return isSavedDiagram(storedDiagram) ? storedDiagram : null;
     } catch {
         return null;
@@ -72,12 +100,24 @@ function loadSavedDiagram(): SavedDiagram | null {
 /**
  * Shares the chosen files and the generated diagram between the upload page and the diagram workspace,
  * so going back to edit the files keeps them selected.
+ *
+ * Only the current color scheme's diagram is kept in memory; changing scheme fetches the new one and
+ * frees the old, so memory use doesn't grow with the number of schemes.
  */
 export function DiagramSessionProvider({ children }: { children: React.ReactNode }) {
     const [configFiles, setConfigFiles] = useState<File[]>([]);
     const [templateFiles, setTemplateFiles] = useState<File[]>([]);
     const [diagram, setDiagram] = useState<Diagram | null>(null);
+    const [isChangingColorScheme, setIsChangingColorScheme] = useState(false);
+    const [storedColorSchemeFamily, setStoredColorSchemeFamily] = useLocalStorage<string>({
+        key: COLOR_SCHEME_FAMILY_STORAGE_KEY,
+        defaultValue: DEFAULT_COLOR_SCHEME_FAMILY,
+    });
+    const colorSchemeFamily = isColorSchemeFamily(storedColorSchemeFamily) ? storedColorSchemeFamily : DEFAULT_COLOR_SCHEME_FAMILY;
     const nextDiagramId = useRef(1);
+    const currentDiagramId = useRef<number | null>(null);
+    // Only the most recent request may replace the diagram, in case scheme changes overlap
+    const latestRequestNumber = useRef(0);
 
     // Release the previous SVGs' object URLs whenever the diagram is replaced
     useEffect(() => {
@@ -89,17 +129,53 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
     }, [diagram]);
 
     // Both themes are drawn up front, so switching the site theme swaps the image instantly
-    const showDiagram = useCallback(async (savedDiagram: SavedDiagram) => {
+    const showDiagram = useCallback(async (savedDiagram: SavedDiagram, { keepView = false }: ShowDiagramOptions = {}) => {
         const renderedSvgs = await Promise.all(DIAGRAM_THEMES.map((theme) => renderSvg(savedDiagram.dotByTheme[theme])));
         const svgByTheme = mapThemes((theme) => renderedSvgs[DIAGRAM_THEMES.indexOf(theme)]);
+        const id = keepView && currentDiagramId.current !== null ? currentDiagramId.current : nextDiagramId.current++;
+        currentDiagramId.current = id;
         setDiagram({
             ...savedDiagram,
-            id: nextDiagramId.current++,
+            id,
             svgByTheme,
             svgUrlByTheme: mapThemes((theme) => URL.createObjectURL(createSvgBlob(svgByTheme[theme]))),
         });
         saveDiagram(savedDiagram);
     }, []);
+
+    const generateDiagram = useCallback(async (family: ColorSchemeFamily, options: ShowDiagramOptions = {}) => {
+        const requestNumber = ++latestRequestNumber.current;
+        const colorSchemeByTheme = COLOR_SCHEMES_BY_FAMILY[family];
+        const result = await requestDiagram({
+            configFiles: await readYamlFiles(configFiles),
+            templateFiles: await readYamlFiles(templateFiles),
+            colorSchemes: Object.values(colorSchemeByTheme),
+        });
+        if (requestNumber !== latestRequestNumber.current) {
+            return;
+        }
+        await showDiagram({
+            colorSchemeFamily: family,
+            dotByTheme: mapThemes((theme) => result.dotByColorScheme[colorSchemeByTheme[theme]]),
+            graphml: result.graphml,
+            summary: describeUpload(configFiles.length, templateFiles.length),
+        }, options);
+    }, [configFiles, templateFiles, showDiagram]);
+
+    const canChangeColorScheme = configFiles.length > 0;
+
+    const changeColorSchemeFamily = useCallback(async (family: ColorSchemeFamily) => {
+        setStoredColorSchemeFamily(family);
+        if (!canChangeColorScheme) {
+            return;
+        }
+        setIsChangingColorScheme(true);
+        try {
+            await generateDiagram(family, { keepView: true });
+        } finally {
+            setIsChangingColorScheme(false);
+        }
+    }, [canChangeColorScheme, generateDiagram, setStoredColorSchemeFamily]);
 
     const restoreSavedDiagram = useCallback(async () => {
         const savedDiagram = loadSavedDiagram();
@@ -115,10 +191,17 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         templateFiles,
         setConfigFiles,
         setTemplateFiles,
+        colorSchemeFamily,
+        canChangeColorScheme,
+        isChangingColorScheme,
         diagram,
-        showDiagram,
+        generateDiagram,
+        changeColorSchemeFamily,
         restoreSavedDiagram,
-    }), [configFiles, templateFiles, diagram, showDiagram, restoreSavedDiagram]);
+    }), [
+        configFiles, templateFiles, colorSchemeFamily, canChangeColorScheme, isChangingColorScheme,
+        diagram, generateDiagram, changeColorSchemeFamily, restoreSavedDiagram,
+    ]);
 
     return <DiagramSessionContext.Provider value={session}>{children}</DiagramSessionContext.Provider>;
 }

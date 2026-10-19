@@ -4,55 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Container, FileInput, Stack, Text, Title } from "@mantine/core";
 import classes from "@/components/Page.module.css";
-import { requestDiagram } from "@/diagramApi/client";
-import { DiagramApiError, type YamlFile } from "@/diagramApi/types";
-import { COLOR_SCHEME_BY_THEME } from "@/diagramRendering/colorSchemes";
-import { describeUpload, useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
+import { toDisplayedError, type DisplayedError } from "@/diagramApi/displayedError";
+import { useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
 
 const YAML_FILE_TYPES = ".yml,.yaml";
-const INTERNAL_ERROR_CODE = "internal_error";
-
-interface DisplayedError {
-    message: string;
-    referenceId?: string;
-}
-
-function toDisplayedError(error: unknown): DisplayedError {
-    if (!(error instanceof DiagramApiError)) {
-        console.error(error);
-        return { message: "Something went wrong while generating the diagram." };
-    }
-    // Only unexpected errors need a reference to match the user's report to the server log
-    return { message: error.message, referenceId: error.code === INTERNAL_ERROR_CODE ? error.requestId : undefined };
-}
-
-async function readYamlFiles(files: File[]): Promise<YamlFile[]> {
-    return Promise.all(files.map(async (file) => ({ name: file.name, content: await file.text() })));
-}
 
 export default function Home() {
     const router = useRouter();
-    const { configFiles, templateFiles, setConfigFiles, setTemplateFiles, showDiagram } = useDiagramSession();
+    const {
+        configFiles, templateFiles, setConfigFiles, setTemplateFiles, colorSchemeFamily, generateDiagram,
+    } = useDiagramSession();
     const [isGenerating, setIsGenerating] = useState(false);
     const [displayedError, setDisplayedError] = useState<DisplayedError | null>(null);
 
-    async function generateDiagram() {
+    async function generateAndOpenDiagram() {
         setDisplayedError(null);
         setIsGenerating(true);
         try {
-            const result = await requestDiagram({
-                configFiles: await readYamlFiles(configFiles),
-                templateFiles: await readYamlFiles(templateFiles),
-                colorSchemes: Object.values(COLOR_SCHEME_BY_THEME),
-            });
-            await showDiagram({
-                dotByTheme: {
-                    light: result.dotByColorScheme[COLOR_SCHEME_BY_THEME.light],
-                    dark: result.dotByColorScheme[COLOR_SCHEME_BY_THEME.dark],
-                },
-                graphml: result.graphml,
-                summary: describeUpload(configFiles.length, templateFiles.length),
-            });
+            await generateDiagram(colorSchemeFamily);
             router.push("/diagram");
         } catch (error) {
             setDisplayedError(toDisplayedError(error));
@@ -90,7 +59,7 @@ export default function Home() {
                         value={templateFiles}
                         onChange={(files) => { setTemplateFiles(files); setDisplayedError(null); }}
                     />
-                    <Button onClick={generateDiagram} loading={isGenerating} disabled={configFiles.length === 0}>
+                    <Button onClick={generateAndOpenDiagram} loading={isGenerating} disabled={configFiles.length === 0}>
                         Generate diagram
                     </Button>
                     {displayedError && (
