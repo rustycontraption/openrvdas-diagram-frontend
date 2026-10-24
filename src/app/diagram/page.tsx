@@ -44,7 +44,6 @@ export default function DiagramWorkspacePage() {
     }
 
     const svg = diagram.svgByTheme[theme];
-    const svgUrl = diagram.svgUrlByTheme[theme];
 
     async function exportPng() {
         // The SVG is transparent, so the PNG gets the background it is shown on
@@ -100,8 +99,8 @@ export default function DiagramWorkspacePage() {
                 </Alert>
             )}
             <div className={classes.body}>
-                {/* Keyed by diagram, not theme, so switching theme swaps the image and keeps zoom and pan */}
-                <DiagramCanvas key={diagram.id} svgUrl={svgUrl} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
+                {/* Keyed by diagram, not theme, so switching theme swaps the drawing and keeps zoom and pan */}
+                <DiagramCanvas key={diagram.id} svg={svg} graph={diagram.graph} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
                 <SettingsPanel
                     isOpen={isSettingsOpen}
                     isNarrowScreen={isNarrowScreen}

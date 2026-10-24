@@ -1,16 +1,16 @@
-import { forwardRef, type Ref } from "react";
+import { forwardRef, type ComponentProps, type Ref } from "react";
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
+import { InteractiveDiagramSvg } from "./InteractiveDiagramSvg";
 import classes from "./DiagramWorkspace.module.css";
 
 const MINIMUM_ZOOM = 0.05;
 const MAXIMUM_ZOOM = 8;
 
-interface DiagramCanvasProps {
-    svgUrl: string;
+type DiagramCanvasProps = ComponentProps<typeof InteractiveDiagramSvg> & {
     canvasElementRef?: Ref<HTMLDivElement>;
-}
+};
 
-export const DiagramCanvas = forwardRef<ReactZoomPanPinchRef, DiagramCanvasProps>(function DiagramCanvas({ svgUrl, canvasElementRef }, zoomControlsRef) {
+export const DiagramCanvas = forwardRef<ReactZoomPanPinchRef, DiagramCanvasProps>(function DiagramCanvas({ canvasElementRef, ...diagramProps }, zoomControlsRef) {
     return (
         <div className={classes.canvas} ref={canvasElementRef}>
             <TransformWrapper
@@ -21,7 +21,7 @@ export const DiagramCanvas = forwardRef<ReactZoomPanPinchRef, DiagramCanvasProps
                 fitOnInit="contain"
             >
                 <TransformComponent wrapperClass={classes.canvasViewport}>
-                    <img src={svgUrl} alt="Generated OpenRVDAS data-flow diagram" className={classes.diagramImage} draggable={false} />
+                    <InteractiveDiagramSvg {...diagramProps} />
                 </TransformComponent>
             </TransformWrapper>
         </div>

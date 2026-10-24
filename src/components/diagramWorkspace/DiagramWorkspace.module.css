@@ -46,12 +46,6 @@
     height: 100% !important;
 }
 
-.diagramImage {
-    display: block;
-    max-width: none;
-    user-select: none;
-}
-
 .settingsPanel {
     flex: none;
     width: 280px;

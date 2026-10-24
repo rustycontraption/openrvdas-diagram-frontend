@@ -1,9 +1,10 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { useLocalStorage } from "@mantine/hooks";
 import { requestDiagram } from "@/diagramApi/client";
 import type { YamlFile } from "@/diagramApi/types";
+import { parseGenericGraphml, type DiagramGraph } from "@/diagramModel/diagramGraph";
 import {
     COLOR_SCHEMES_BY_FAMILY,
     DEFAULT_COLOR_SCHEME_FAMILY,
@@ -12,7 +13,7 @@ import {
     type ColorSchemeFamily,
     type DiagramTheme,
 } from "@/diagramRendering/colorSchemes";
-import { createSvgBlob, renderSvg } from "@/diagramRendering/graphvizRenderer";
+import { renderSvg } from "@/diagramRendering/graphvizRenderer";
 
 const SAVED_DIAGRAM_STORAGE_KEY = "openrvdas-diagram:last-diagram";
 const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
@@ -24,8 +25,9 @@ export interface Diagram {
     colorSchemeFamily: ColorSchemeFamily;
     dotByTheme: ByTheme<string>;
     svgByTheme: ByTheme<string>;
-    svgUrlByTheme: ByTheme<string>;
     graphml: string;
+    /** Null when the GraphML cannot be read; the diagram is still shown, just without interaction */
+    graph: DiagramGraph | null;
     summary: string;
 }
 
@@ -107,14 +109,6 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
     // Only the most recent request may replace the diagram, in case scheme changes overlap
     const latestRequestNumber = useRef(0);
 
-    useEffect(() => {
-        return () => {
-            if (diagram) {
-                DIAGRAM_THEMES.forEach((theme) => URL.revokeObjectURL(diagram.svgUrlByTheme[theme]));
-            }
-        };
-    }, [diagram]);
-
     const showDiagram = useCallback(async (savedDiagram: SavedDiagram, { keepView = false }: ShowDiagramOptions = {}) => {
         const renderedSvgs = await Promise.all(DIAGRAM_THEMES.map((theme) => renderSvg(savedDiagram.dotByTheme[theme])));
         const svgByTheme = mapThemes((theme) => renderedSvgs[DIAGRAM_THEMES.indexOf(theme)]);
@@ -124,7 +118,7 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
             ...savedDiagram,
             id,
             svgByTheme,
-            svgUrlByTheme: mapThemes((theme) => URL.createObjectURL(createSvgBlob(svgByTheme[theme]))),
+            graph: parseGenericGraphml(savedDiagram.graphml),
         });
         saveDiagram(savedDiagram);
     }, []);

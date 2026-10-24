@@ -1,0 +1,12 @@
+.diagram {
+    user-select: none;
+
+    & svg {
+        display: block;
+        max-width: none;
+    }
+}
+
+.nodesClickable [data-diagram-node-id] {
+    cursor: pointer;
+}
