@@ -1,8 +1,7 @@
+import DOMPurify from "dompurify";
 import type { DiagramGraph } from "@/diagramModel/diagramGraph";
 
 const SVG_MIME_TYPE = "image/svg+xml";
-const EVENT_HANDLER_ATTRIBUTE_PATTERN = /^on/i;
-const SCRIPT_URL_PATTERN = /^\s*javascript:/i;
 
 export const NODE_ID_ATTRIBUTE = "data-diagram-node-id";
 
@@ -23,24 +22,16 @@ function tagNodes(svgRoot: Element, nodeIdByDotName: Map<string, string>) {
     }
 }
 
-function removeScripts(svgRoot: Element) {
-    svgRoot.querySelectorAll("script, foreignObject").forEach((element) => element.remove());
-    for (const element of [svgRoot, ...svgRoot.querySelectorAll("*")]) {
-        for (const attribute of [...element.attributes]) {
-            if (EVENT_HANDLER_ATTRIBUTE_PATTERN.test(attribute.name) || SCRIPT_URL_PATTERN.test(attribute.value)) {
-                element.removeAttribute(attribute.name);
-            }
-        }
-    }
+function sanitizeSvg(svgRoot: SVGSVGElement) {
+    DOMPurify.sanitize(svgRoot, { USE_PROFILES: { svg: true, svgFilters: true }, IN_PLACE: true });
 }
-
 
 export function prepareInteractiveSvg(svg: string, graph: DiagramGraph | null): SVGSVGElement | null {
     const svgRoot = new DOMParser().parseFromString(svg, SVG_MIME_TYPE).documentElement;
     if (!(svgRoot instanceof SVGSVGElement)) {
         return null;
     }
-    removeScripts(svgRoot);
+    sanitizeSvg(svgRoot);
     if (graph) {
         const nodeIdByDotName = new Map(graph.nodes.map((node, nodeIndex) => [dotNodeName(nodeIndex), node.id]));
         tagNodes(svgRoot, nodeIdByDotName);
