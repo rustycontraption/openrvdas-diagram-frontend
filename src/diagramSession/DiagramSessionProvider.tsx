@@ -4,7 +4,6 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import { useLocalStorage } from "@mantine/hooks";
 import { requestDiagram } from "@/diagramApi/client";
 import type { YamlFile } from "@/diagramApi/types";
-import { parseGenericGraphml, type DiagramGraph } from "@/diagramModel/diagramGraph";
 import {
     COLOR_SCHEMES_BY_FAMILY,
     DEFAULT_COLOR_SCHEME_FAMILY,
@@ -13,7 +12,7 @@ import {
     type ColorSchemeFamily,
     type DiagramTheme,
 } from "@/diagramRendering/colorSchemes";
-import { renderSvg } from "@/diagramRendering/graphvizRenderer";
+import { renderSvg } from "@/diagramRendering/diagramSvg";
 
 const SAVED_DIAGRAM_STORAGE_KEY = "openrvdas-diagram:last-diagram";
 const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
@@ -26,8 +25,6 @@ export interface Diagram {
     dotByTheme: ByTheme<string>;
     svgByTheme: ByTheme<string>;
     graphml: string;
-    /** Null when the GraphML cannot be read; the diagram is still shown, just without interaction */
-    graph: DiagramGraph | null;
     summary: string;
 }
 
@@ -118,7 +115,6 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
             ...savedDiagram,
             id,
             svgByTheme,
-            graph: parseGenericGraphml(savedDiagram.graphml),
         });
         saveDiagram(savedDiagram);
     }, []);

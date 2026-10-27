@@ -12,8 +12,7 @@ import { WorkspaceToolbar } from "@/components/diagramWorkspace/WorkspaceToolbar
 import classes from "@/components/diagramWorkspace/DiagramWorkspace.module.css";
 import { toDisplayedError } from "@/diagramApi/displayedError";
 import type { ColorSchemeFamily } from "@/diagramRendering/colorSchemes";
-import { DOWNLOAD_FILE_STEM, downloadBlob, downloadGraphml, exportYed } from "@/diagramRendering/downloads";
-import { convertSvgToPngBlob, createSvgBlob } from "@/diagramRendering/graphvizRenderer";
+import { DOWNLOAD_FILE_STEM, convertSvgToPngBlob, createGraphmlBlob, createSvgBlob, downloadBlob } from "@/diagramRendering/downloads";
 import { useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
 
 const ZOOM_ANIMATION_MILLISECONDS = 200;
@@ -70,7 +69,7 @@ export default function DiagramWorkspacePage() {
     async function exportYedGraphml() {
         setWorkspaceErrorMessage(null);
         try {
-            exportYed(await requestYedGraphml());
+            downloadBlob(createGraphmlBlob(await requestYedGraphml()), `${DOWNLOAD_FILE_STEM}-yed.graphml`);
         } catch (error) {
             setWorkspaceErrorMessage(`The yEd file could not be created. ${toDisplayedError(error).message}`);
         }
@@ -87,7 +86,7 @@ export default function DiagramWorkspacePage() {
                 onFitToScreen={() => zoomControlsRef.current?.fitToView({ animationTime: ZOOM_ANIMATION_MILLISECONDS })}
                 onExportSvg={() => downloadBlob(createSvgBlob(svg), `${DOWNLOAD_FILE_STEM}.svg`)}
                 onExportPng={exportPng}
-                onExportGraphml={() => downloadGraphml(diagram.graphml)}
+                onExportGraphml={() => downloadBlob(createGraphmlBlob(diagram.graphml), `${DOWNLOAD_FILE_STEM}.graphml`)}
                 onExportYed={exportYedGraphml}
                 canExportYed={hasSelectedFiles}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
@@ -100,7 +99,7 @@ export default function DiagramWorkspacePage() {
             )}
             <div className={classes.body}>
                 {/* Keyed by diagram, not theme, so switching theme swaps the drawing and keeps zoom and pan */}
-                <DiagramCanvas key={diagram.id} svg={svg} graph={diagram.graph} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
+                <DiagramCanvas key={diagram.id} svg={svg} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
                 <SettingsPanel
                     isOpen={isSettingsOpen}
                     isNarrowScreen={isNarrowScreen}
