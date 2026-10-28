@@ -6,3 +6,17 @@
         max-width: none;
     }
 }
+
+/* Graphviz gives every node <g> the class "node" and every edge <g> the class "edge" */
+.highlighted:global(.node) :is(path, polygon, ellipse) {
+    fill: #ff0000;
+}
+
+.highlighted:global(.edge) path {
+    stroke: #ff0000;
+}
+
+.highlighted:global(.edge) polygon {
+    fill: #ff0000;
+    stroke: #ff0000;
+}

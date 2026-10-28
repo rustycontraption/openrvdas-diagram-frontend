@@ -1,14 +1,14 @@
 import { useLayoutEffect, useMemo, useRef, type MouseEvent } from "react";
-import { prepareInteractiveSvg, type DatapathGroup } from "@/diagramRendering/diagramSvg";
+import { prepareInteractiveSvg, setDatapathAppearance, type DatapathGroup } from "@/diagramRendering/diagramSvg";
 import classes from "./InteractiveDiagramSvg.module.css";
 
 interface InteractiveDiagramSvgProps {
     svg: string;
-    onNodeClick?: (nodeElement: SVGGElement, datapathGroups: DatapathGroup[]) => void;
 }
 
-export function InteractiveDiagramSvg({ svg, onNodeClick }: InteractiveDiagramSvgProps) {
+export function InteractiveDiagramSvg({ svg }: InteractiveDiagramSvgProps) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const highlightedDatapathGroups = useRef<DatapathGroup[]>([]);
     const preparedSvg = useMemo(() => prepareInteractiveSvg(svg), [svg]);
 
     useLayoutEffect(() => {
@@ -16,7 +16,7 @@ export function InteractiveDiagramSvg({ svg, onNodeClick }: InteractiveDiagramSv
     }, [preparedSvg]);
 
     function handleClick(event: MouseEvent<HTMLDivElement>) {
-        if (!preparedSvg || !onNodeClick || !(event.target instanceof Element)) {
+        if (!preparedSvg || !(event.target instanceof Element)) {
             return;
         }
         // The click can land on the node's border, fill or label text, so find the node group that holds it
@@ -24,7 +24,11 @@ export function InteractiveDiagramSvg({ svg, onNodeClick }: InteractiveDiagramSv
         if (!nodeElement || !preparedSvg.svgRoot.contains(nodeElement)) {
             return;
         }
-        onNodeClick(nodeElement, preparedSvg.datapathGroupsByElement.get(nodeElement) ?? []);
+
+        const datapathGroups = preparedSvg.datapathGroupsByElement.get(nodeElement) ?? [];
+        setDatapathAppearance(highlightedDatapathGroups.current, classes.highlighted, false);
+        setDatapathAppearance(datapathGroups, classes.highlighted, true);
+        highlightedDatapathGroups.current = datapathGroups;
     }
 
     return (
