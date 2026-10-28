@@ -98,7 +98,6 @@ export default function DiagramWorkspacePage() {
                 </Alert>
             )}
             <div className={classes.body}>
-                {/* Keyed by diagram, not theme, so switching theme swaps the drawing and keeps zoom and pan */}
                 <DiagramCanvas key={diagram.id} svg={svg} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
                 <SettingsPanel
                     isOpen={isSettingsOpen}
