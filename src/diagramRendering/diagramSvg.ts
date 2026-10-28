@@ -39,6 +39,15 @@ function getElementTitle(element: Element): string {
     return element.querySelector(":scope > title")?.textContent?.trim() ?? "";
 }
 
+// Adds or removes a CSS class on every node and edge in the given datapath groups; the class decides how they look
+export function setDatapathAppearance(datapathGroups: DatapathGroup[], className: string, isApplied: boolean) {
+    for (const datapathGroup of datapathGroups) {
+        for (const element of datapathGroup.elements) {
+            element.classList.toggle(className, isApplied);
+        }
+    }
+}
+
 // Edge titles name their ends with ports, like "node_0:e"
 function stripEdgePortLocation(edgeEndpoint: string): string {
     return edgeEndpoint.split(":")[0];
