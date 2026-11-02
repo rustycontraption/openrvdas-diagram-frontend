@@ -3,6 +3,17 @@ import DOMPurify from "dompurify";
 
 const SVG_MIME_TYPE = "image/svg+xml";
 
+// openrvdas-diagram adds each node's type to its <g> class list, like <g class="node source">
+export type NodeType = "source" | "logger" | "destination";
+
+export interface DiagramNode {
+    // The DOT name, unique within the diagram
+    title: string;
+    // The text shown in the node box, which can repeat (two YAML files can each have a logger with the same name)
+    label: string;
+    element: SVGGElement;
+}
+
 export interface DatapathGroup {
     elements: Set<SVGGElement>;
 }
@@ -10,6 +21,7 @@ export interface DatapathGroup {
 export interface PreparedSvg {
     svgRoot: SVGSVGElement;
     datapathGroupsByElement: Map<SVGGElement, DatapathGroup[]>;
+    nodesByType: Record<NodeType, DiagramNode[]>;
 }
 
 interface OutgoingEdge {
@@ -37,6 +49,25 @@ function sanitizeSvg(svgRoot: SVGSVGElement) {
 // Graphviz writes each node's and edge's DOT name into a <title> child
 function getElementTitle(element: Element): string {
     return element.querySelector(":scope > title")?.textContent?.trim() ?? "";
+}
+
+function getNodeLabel(nodeElement: SVGGElement): string {
+    return nodeElement.querySelector("text")?.textContent?.trim() ?? "";
+}
+
+function listNodesByType(svgRoot: SVGSVGElement): Record<NodeType, DiagramNode[]> {
+    function listNodesOfType(nodeType: NodeType): DiagramNode[] {
+        return [...svgRoot.querySelectorAll<SVGGElement>(`g.node.${nodeType}`)].map((nodeElement) => ({
+            title: getElementTitle(nodeElement),
+            label: getNodeLabel(nodeElement),
+            element: nodeElement,
+        }));
+    }
+    return {
+        source: listNodesOfType("source"),
+        logger: listNodesOfType("logger"),
+        destination: listNodesOfType("destination"),
+    };
 }
 
 // Adds or removes a CSS class on every node and edge in the given datapath groups; the class decides how they look
@@ -146,5 +177,9 @@ export function prepareInteractiveSvg(svg: string): PreparedSvg | null {
         return null;
     }
     sanitizeSvg(svgRoot);
-    return { svgRoot, datapathGroupsByElement: buildDatapathGroups(svgRoot) };
+    return {
+        svgRoot,
+        datapathGroupsByElement: buildDatapathGroups(svgRoot),
+        nodesByType: listNodesByType(svgRoot),
+    };
 }

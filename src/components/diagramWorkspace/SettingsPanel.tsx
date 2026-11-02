@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Drawer, Group, Loader, SegmentedControl, Stack, Text, Title, Combobox, useCombobox, Input, Pill, PillsInput, Checkbox } from "@mantine/core";
-import type { DatapathGroup } from "@/diagramRendering/diagramSvg";
+import { Drawer, Group, Loader, SegmentedControl, Stack, Text, Title, Combobox, useCombobox, Input, Pill, PillsInput, Checkbox, ScrollArea } from "@mantine/core";
+import type { DatapathGroup, DiagramNode, NodeType } from "@/diagramRendering/diagramSvg";
 import { COLOR_SCHEME_FAMILY_OPTIONS, isColorSchemeFamily, type ColorSchemeFamily } from "@/diagramRendering/colorSchemes";
 import classes from "./DiagramWorkspace.module.css";
+
+// Long node lists scroll inside the dropdown instead of running off the screen
+const FILTER_DROPDOWN_MAXIMUM_HEIGHT = 200;
 
 interface SettingsContentProps {
     colorSchemeFamily: ColorSchemeFamily;
@@ -10,6 +13,7 @@ interface SettingsContentProps {
     isChangingColorScheme: boolean;
     canChangeColorScheme: boolean;
     datapathGroupsByElement?: Map<SVGGElement, DatapathGroup[]>;
+    nodesByType?: Record<NodeType, DiagramNode[]>;
 }
 
 interface SettingsPanelProps extends SettingsContentProps {
@@ -19,13 +23,15 @@ interface SettingsPanelProps extends SettingsContentProps {
 }
 
 interface FilterComboboxProps {
+    nodeType: NodeType;
+    nodesByType?: Record<NodeType, DiagramNode[]>;
     datapathGroupsByElement?: Map<SVGGElement, DatapathGroup[]>;
 }
 
 
-function FilterCombobox({ datapathGroupsByElement }: FilterComboboxProps) {
+function FilterCombobox({ nodeType, nodesByType, datapathGroupsByElement }: FilterComboboxProps) {
     console.log(datapathGroupsByElement);
-    const comboBoxItems = ["test1", "test2"];
+    const nodesOfType = nodesByType?.[nodeType] ?? [];
     const combobox = useCombobox({
         onDropdownClose: () => combobox.resetSelectedOption(),
         onDropdownOpen: () => combobox.updateSelectedOptionIndex('active'),
@@ -42,17 +48,18 @@ function FilterCombobox({ datapathGroupsByElement }: FilterComboboxProps) {
         setValue((current) => current.filter((v) => v !== val));
 
 
-    const options = comboBoxItems.map((item) => (
-        <Combobox.Option value={item} key={item} active={value.includes(item)}>
+    // Labels can repeat, so each option is identified by the node's unique title and shows its label
+    const options = nodesOfType.map((node) => (
+        <Combobox.Option value={node.title} key={node.title} active={value.includes(node.title)}>
             <Group gap="sm">
                 <Checkbox
-                    checked={value.includes(item)}
+                    checked={value.includes(node.title)}
                     onChange={() => { }}
                     aria-hidden
                     tabIndex={-1}
                     style={{ pointerEvents: 'none' }}
                 />
-                <span>{item}</span>
+                <span>{node.label}</span>
             </Group>
         </Combobox.Option>
     ));
@@ -79,13 +86,17 @@ function FilterCombobox({ datapathGroupsByElement }: FilterComboboxProps) {
                 </PillsInput>
             </Combobox.DropdownTarget>
             <Combobox.Dropdown>
-                <Combobox.Options>{options}</Combobox.Options>
+                <Combobox.Options>
+                    <ScrollArea.Autosize mah={FILTER_DROPDOWN_MAXIMUM_HEIGHT} type="auto">
+                        {options}
+                    </ScrollArea.Autosize>
+                </Combobox.Options>
             </Combobox.Dropdown>
         </Combobox>
     );
 }
 
-function SettingsContent({ colorSchemeFamily, onColorSchemeFamilyChange, isChangingColorScheme, canChangeColorScheme, datapathGroupsByElement }: SettingsContentProps) {
+function SettingsContent({ colorSchemeFamily, onColorSchemeFamilyChange, isChangingColorScheme, canChangeColorScheme, datapathGroupsByElement, nodesByType }: SettingsContentProps) {
     return (
         <Stack gap="xs">
             <Title order={5}>Display</Title>
@@ -103,7 +114,15 @@ function SettingsContent({ colorSchemeFamily, onColorSchemeFamilyChange, isChang
             <Title order={5}>Filter</Title>
             <Group gap="xs">
                 <Text size="sm">Sources:</Text>
-                <FilterCombobox group="sources" datapathGroupsByElement={datapathGroupsByElement} />
+                <FilterCombobox nodeType="source" nodesByType={nodesByType} datapathGroupsByElement={datapathGroupsByElement} />
+            </Group>
+            <Group gap="xs">
+                <Text size="sm">Loggers:</Text>
+                <FilterCombobox nodeType="logger" nodesByType={nodesByType} datapathGroupsByElement={datapathGroupsByElement} />
+            </Group>
+            <Group gap="xs">
+                <Text size="sm">Destinations:</Text>
+                <FilterCombobox nodeType="destination" nodesByType={nodesByType} datapathGroupsByElement={datapathGroupsByElement} />
             </Group>
 
         </Stack>

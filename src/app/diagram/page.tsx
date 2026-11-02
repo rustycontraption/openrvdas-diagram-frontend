@@ -111,6 +111,7 @@ export default function DiagramWorkspacePage() {
                     isChangingColorScheme={isChangingColorScheme}
                     canChangeColorScheme={hasSelectedFiles}
                     datapathGroupsByElement={preparedSvg?.datapathGroupsByElement}
+                    nodesByType={preparedSvg?.nodesByType}
                 />
             </div>
         </div>
