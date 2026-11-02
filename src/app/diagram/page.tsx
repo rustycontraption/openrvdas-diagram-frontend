@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Center, Loader, useComputedColorScheme } from "@mantine/core";
 import { useLocalStorage, useMediaQuery } from "@mantine/hooks";
@@ -12,6 +12,7 @@ import { WorkspaceToolbar } from "@/components/diagramWorkspace/WorkspaceToolbar
 import classes from "@/components/diagramWorkspace/DiagramWorkspace.module.css";
 import { toDisplayedError } from "@/diagramApi/displayedError";
 import type { ColorSchemeFamily } from "@/diagramRendering/colorSchemes";
+import { prepareInteractiveSvg } from "@/diagramRendering/diagramSvg";
 import { DOWNLOAD_FILE_STEM, convertSvgToPngBlob, createGraphmlBlob, createSvgBlob, downloadBlob } from "@/diagramRendering/downloads";
 import { useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
 
@@ -28,6 +29,8 @@ export default function DiagramWorkspacePage() {
     const isNarrowScreen = useMediaQuery("(max-width: 48em)") ?? false;
     const [isSettingsOpen, setIsSettingsOpen] = useLocalStorage({ key: "openrvdas-diagram:settings-open", defaultValue: false });
     const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState<string | null>(null);
+    const displayedSvg = diagram?.svgByTheme[theme];
+    const preparedSvg = useMemo(() => (displayedSvg ? prepareInteractiveSvg(displayedSvg) : null), [displayedSvg]);
 
     useEffect(() => {
         if (diagram) {
@@ -98,7 +101,7 @@ export default function DiagramWorkspacePage() {
                 </Alert>
             )}
             <div className={classes.body}>
-                <DiagramCanvas key={diagram.id} svg={svg} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
+                <DiagramCanvas key={diagram.id} preparedSvg={preparedSvg} ref={zoomControlsRef} canvasElementRef={canvasElementRef} />
                 <SettingsPanel
                     isOpen={isSettingsOpen}
                     isNarrowScreen={isNarrowScreen}
@@ -107,6 +110,7 @@ export default function DiagramWorkspacePage() {
                     onColorSchemeFamilyChange={changeColorScheme}
                     isChangingColorScheme={isChangingColorScheme}
                     canChangeColorScheme={hasSelectedFiles}
+                    datapathGroupsByElement={preparedSvg?.datapathGroupsByElement}
                 />
             </div>
         </div>

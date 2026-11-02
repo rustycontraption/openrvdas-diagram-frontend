@@ -1,15 +1,14 @@
-import { useLayoutEffect, useMemo, useRef, type MouseEvent } from "react";
-import { prepareInteractiveSvg, setDatapathAppearance, type DatapathGroup } from "@/diagramRendering/diagramSvg";
+import { useLayoutEffect, useRef, type MouseEvent } from "react";
+import { setDatapathAppearance, type DatapathGroup, type PreparedSvg } from "@/diagramRendering/diagramSvg";
 import classes from "./InteractiveDiagramSvg.module.css";
 
 interface InteractiveDiagramSvgProps {
-    svg: string;
+    preparedSvg: PreparedSvg | null;
 }
 
-export function InteractiveDiagramSvg({ svg }: InteractiveDiagramSvgProps) {
+export function InteractiveDiagramSvg({ preparedSvg }: InteractiveDiagramSvgProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const highlightedDatapathGroups = useRef<DatapathGroup[]>([]);
-    const preparedSvg = useMemo(() => prepareInteractiveSvg(svg), [svg]);
 
     useLayoutEffect(() => {
         containerRef.current?.replaceChildren(...(preparedSvg ? [preparedSvg.svgRoot] : []));
