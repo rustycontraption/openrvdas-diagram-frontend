@@ -35,7 +35,7 @@ export function InteractiveDiagramSvg({ svg }: InteractiveDiagramSvgProps) {
         <div
             ref={containerRef}
             role="img"
-            aria-label="Generated OpenRVDAS data-flow diagram"
+            aria-label="Generated OpenRVDAS logger architecture diagram"
             className={classes.diagram}
             onClick={handleClick}
         />
