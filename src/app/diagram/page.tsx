@@ -9,7 +9,7 @@ import { useDiagramSession } from "@/components/diagram/session/DiagramSessionPr
 // Shows the current diagram. After a reload it restores the saved one, or goes back to the upload page if there is none.
 export default function DiagramWorkspacePage() {
     const router = useRouter();
-    const { diagram, restoreSavedDiagram, hasSelectedFiles } = useDiagramSession();
+    const { diagram, restoreSavedDiagram } = useDiagramSession();
 
     useEffect(() => {
         if (diagram) {

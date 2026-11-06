@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Alert, useComputedColorScheme } from "@mantine/core";
 import { useLocalStorage, useMediaQuery } from "@mantine/hooks";
 import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
-import { toDisplayedError } from "@/components/diagram/api/errors";
 import { COLOR_SCHEMES, DEFAULT_COLOR_SCHEME_FAMILY, isColorSchemeFamily } from "@/components/diagram/model/colorSchemes";
 import type { Diagram } from "@/components/diagram/model/diagram";
 import { findDatapathDotNames } from "@/components/diagram/model/graph";
@@ -13,7 +12,6 @@ import { paintSvgText } from "@/components/diagram/model/paintDiagram";
 import { ColorSchemeSettings } from "./ColorSchemeSettings";
 import { DiagramCanvas } from "./DiagramCanvas";
 import { DOWNLOAD_FILE_STEM, convertSvgToPngBlob, createGraphmlBlob, createSvgBlob, downloadBlob } from "./downloads";
-import { FilesUnavailableNotice } from "./FilesUnavailableNotice";
 import { NodeFilters } from "./NodeFilters";
 import { SettingsPanel } from "./SettingsPanel";
 import { WorkspaceToolbar } from "./WorkspaceToolbar";
@@ -24,7 +22,6 @@ const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
 
 interface DiagramWorkspaceProps {
     diagram: Diagram;
-    requestYedGraphml: () => Promise<string>;
 }
 
 /**
