@@ -1,0 +1,7 @@
+.settingsPanel {
+    flex: none;
+    width: 280px;
+    padding: var(--mantine-spacing-md);
+    overflow-y: auto;
+    border-left: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}

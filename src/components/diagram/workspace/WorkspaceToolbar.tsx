@@ -1,6 +1,6 @@
 import { ActionIcon, Button, Group, Menu, Text, Tooltip } from "@mantine/core";
 import { FaArrowLeft, FaDownload, FaExpand, FaMinus, FaPlus, FaSlidersH } from "react-icons/fa";
-import classes from "./DiagramWorkspace.module.css";
+import classes from "./WorkspaceToolbar.module.css";
 
 interface WorkspaceToolbarProps {
     summary: string;

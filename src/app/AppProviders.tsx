@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { createTheme, MantineProvider, CSSVariablesResolver } from '@mantine/core';
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { DiagramSessionProvider } from "@/diagramSession/DiagramSessionProvider";
+import { DiagramSessionProvider } from "@/components/diagram/session/DiagramSessionProvider";
 
 const FULL_WINDOW_PATHS = ["/diagram"];
 

@@ -2,33 +2,18 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { useLocalStorage } from "@mantine/hooks";
-import { requestDiagram } from "@/diagramApi/client";
-import type { YamlFile } from "@/diagramApi/types";
+import { requestDiagram } from "@/components/diagram/api/client";
+import type { YamlFile } from "@/components/diagram/api/types";
 import {
     COLOR_SCHEMES_BY_FAMILY,
     DEFAULT_COLOR_SCHEME_FAMILY,
-    DIAGRAM_THEMES,
     isColorSchemeFamily,
     type ColorSchemeFamily,
-    type DiagramTheme,
-} from "@/diagramRendering/colorSchemes";
-import { renderSvg } from "@/diagramRendering/diagramSvg";
+} from "@/components/diagram/model/colorSchemes";
+import { buildDiagram, mapThemes, type Diagram, type SavedDiagram } from "@/components/diagram/model/diagram";
+import { loadSavedDiagram, saveDiagram } from "./savedDiagram";
 
-const SAVED_DIAGRAM_STORAGE_KEY = "openrvdas-diagram:last-diagram";
 const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
-
-type ByTheme<Value> = Record<DiagramTheme, Value>;
-
-export interface Diagram {
-    id: number;
-    colorSchemeFamily: ColorSchemeFamily;
-    dotByTheme: ByTheme<string>;
-    svgByTheme: ByTheme<string>;
-    graphml: string;
-    summary: string;
-}
-
-type SavedDiagram = Pick<Diagram, "colorSchemeFamily" | "dotByTheme" | "graphml" | "summary">;
 
 interface ShowDiagramOptions {
     keepView?: boolean;
@@ -59,36 +44,8 @@ export function describeUpload(configCount: number, templateCount: number): stri
     return `${pluralize(configCount, "config file")} · ${pluralize(templateCount, "template file")}`;
 }
 
-function mapThemes<Value>(valueForTheme: (theme: DiagramTheme) => Value): ByTheme<Value> {
-    return Object.fromEntries(DIAGRAM_THEMES.map((theme) => [theme, valueForTheme(theme)])) as ByTheme<Value>;
-}
-
 async function readYamlFiles(files: File[]): Promise<YamlFile[]> {
     return Promise.all(files.map(async (file) => ({ name: file.name, content: await file.text() })));
-}
-
-function isSavedDiagram(value: unknown): value is SavedDiagram {
-    const savedDiagram = value as Partial<SavedDiagram> | null;
-    return isColorSchemeFamily(savedDiagram?.colorSchemeFamily)
-        && DIAGRAM_THEMES.every((theme) => typeof savedDiagram?.dotByTheme?.[theme] === "string");
-}
-
-function saveDiagram(savedDiagram: SavedDiagram) {
-    try {
-        sessionStorage.setItem(SAVED_DIAGRAM_STORAGE_KEY, JSON.stringify(savedDiagram));
-    } catch {
-        // Storage can be unavailable or full; the diagram just won't survive a reload
-    }
-}
-
-function loadSavedDiagram(): SavedDiagram | null {
-    try {
-        const storedText = sessionStorage.getItem(SAVED_DIAGRAM_STORAGE_KEY);
-        const storedDiagram = storedText ? JSON.parse(storedText) : null;
-        return isSavedDiagram(storedDiagram) ? storedDiagram : null;
-    } catch {
-        return null;
-    }
 }
 
 export function DiagramSessionProvider({ children }: { children: React.ReactNode }) {
@@ -107,15 +64,10 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
     const latestRequestNumber = useRef(0);
 
     const showDiagram = useCallback(async (savedDiagram: SavedDiagram, { keepView = false }: ShowDiagramOptions = {}) => {
-        const renderedSvgs = await Promise.all(DIAGRAM_THEMES.map((theme) => renderSvg(savedDiagram.dotByTheme[theme])));
-        const svgByTheme = mapThemes((theme) => renderedSvgs[DIAGRAM_THEMES.indexOf(theme)]);
         const id = keepView && currentDiagramId.current !== null ? currentDiagramId.current : nextDiagramId.current++;
+        const diagram = await buildDiagram(savedDiagram, id);
         currentDiagramId.current = id;
-        setDiagram({
-            ...savedDiagram,
-            id,
-            svgByTheme,
-        });
+        setDiagram(diagram);
         saveDiagram(savedDiagram);
     }, []);
 
