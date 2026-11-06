@@ -1,0 +1,39 @@
+.canvas {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
+    cursor: grab;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.canvasViewport {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.diagram {
+    user-select: none;
+
+    & svg {
+        display: block;
+        max-width: none;
+    }
+}
+
+/* Graphviz gives every node <g> the class "node" and every edge <g> the class "edge" */
+.highlighted:global(.node) :is(path, polygon, ellipse) {
+    fill: #ff0000;
+}
+
+.highlighted:global(.edge) path {
+    stroke: #ff0000;
+}
+
+.highlighted:global(.edge) polygon {
+    fill: #ff0000;
+    stroke: #ff0000;
+}

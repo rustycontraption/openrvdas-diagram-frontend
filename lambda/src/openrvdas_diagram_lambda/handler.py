@@ -62,30 +62,32 @@ def is_yaml_file_list(value):
     )
 
 
-def validate_color_scheme_names(color_scheme_names):
-    if color_scheme_names is None:
-        # Requests from before color schemes existed get the tool's default scheme
-        return [DEFAULT_COLOR_SCHEME_NAME]
-    if not isinstance(color_scheme_names, list) or not color_scheme_names:
-        raise InvalidRequestError("colorSchemes must be a non-empty list of color scheme names.")
-    unknown_names = [name for name in color_scheme_names if name not in COLOR_SCHEMES]
-    if unknown_names:
-        raise InvalidRequestError(
-            f"Unknown color schemes: {', '.join(map(str, unknown_names))}. Valid names are: {', '.join(COLOR_SCHEMES)}."
-        )
-    if len(set(color_scheme_names)) != len(color_scheme_names):
-        raise InvalidRequestError("colorSchemes must not name the same color scheme twice.")
-    return color_scheme_names
+# def validate_color_scheme_names(color_scheme_names):
+#     if color_scheme_names is None:
+#         # Requests from before color schemes existed get the tool's default scheme
+#         return [DEFAULT_COLOR_SCHEME_NAME]
+#     if not isinstance(color_scheme_names, list) or not color_scheme_names:
+#         raise InvalidRequestError("colorSchemes must be a non-empty list of color scheme names.")
+#     unknown_names = [name for name in color_scheme_names if name not in COLOR_SCHEMES]
+#     if unknown_names:
+#         raise InvalidRequestError(
+#             f"Unknown color schemes: {', '.join(map(str, unknown_names))}. Valid names are: {', '.join(COLOR_SCHEMES)}."
+#         )
+#     if len(set(color_scheme_names)) != len(color_scheme_names):
+#         raise InvalidRequestError("colorSchemes must not name the same color scheme twice.")
+#     return color_scheme_names
 
 
-def validate_graphml_format(graphml_format):
-    if graphml_format is None:
-        return GRAPHML_FORMAT_GENERIC
-    if graphml_format not in SUPPORTED_GRAPHML_FORMATS:
-        raise InvalidRequestError(
-            f"graphmlFormat must be one of: {', '.join(SUPPORTED_GRAPHML_FORMATS)}."
-        )
-    return graphml_format
+def validate_graphml_formats(graphml_formats):
+    print("test",graphml_formats)
+    if not graphml_formats:
+        return [GRAPHML_FORMAT_GENERIC]
+    for format in graphml_formats:
+        if format not in SUPPORTED_GRAPHML_FORMATS:
+            raise InvalidRequestError(
+                f"graphmlFormat must be one of: {', '.join(SUPPORTED_GRAPHML_FORMATS)}."
+            )
+    return list(set(graphml_formats))
 
 
 def validate_request(body):
@@ -93,6 +95,7 @@ def validate_request(body):
         raise InvalidRequestError("Request body must be a JSON object.")
     config_files = body.get("configFiles")
     template_files = body.get("templateFiles") or []
+    graphml_formats = body.get("graphmlFormats") or []
     if not is_yaml_file_list(config_files) or not is_yaml_file_list(template_files):
         raise InvalidRequestError("Every uploaded file must be a .yml or .yaml file.")
     if not config_files:
@@ -103,8 +106,7 @@ def validate_request(body):
     return (
         config_files,
         template_files,
-        validate_color_scheme_names(body.get("colorSchemes")),
-        validate_graphml_format(body.get("graphmlFormat")),
+        validate_graphml_formats(graphml_formats),
     )
 
 
@@ -115,7 +117,7 @@ def write_yaml_files(directory, files):
         (directory / Path(file["name"]).name).write_text(file["content"])
 
 
-def generate_diagram(config_files, template_files, color_scheme_names, graphml_format):
+def generate_diagram(config_files, template_files, graphml_formats):
     # The tool reads from directories, so files are staged in /tmp, the only writable path in Lambda
     with tempfile.TemporaryDirectory() as working_directory:
         config_dir = Path(working_directory) / CONFIG_DIRECTORY_NAME
@@ -123,17 +125,14 @@ def generate_diagram(config_files, template_files, color_scheme_names, graphml_f
         write_yaml_files(config_dir, config_files)
         write_yaml_files(template_dir, template_files)
         inventory = LoggerInventoryBuilder().collectAndParseLoggers(config_dir=config_dir, template_dir=template_dir)
-    # The renderer only reads generic GraphML, so DOT is always drawn from it whatever format is returned
     generic_graphml = GraphmlBuilder(inventory, graphml_format=GRAPHML_FORMAT_GENERIC).to_xml()
-    if graphml_format == GRAPHML_FORMAT_GENERIC:
-        graphml = generic_graphml
-    else:
-        graphml = GraphmlBuilder(inventory, graphml_format=graphml_format).to_xml()
-    dot_by_color_scheme = {
-        name: GraphmlRenderer(generic_graphml, color_scheme=get_color_scheme(name)).to_dot()
-        for name in color_scheme_names
+    graphml_by_format = { 
+        graphml_format: generic_graphml if graphml_format == GRAPHML_FORMAT_GENERIC
+        else GraphmlBuilder(inventory, graphml_format=graphml_format).to_xml() 
+        for graphml_format in graphml_formats
     }
-    return {"dotByColorScheme": dot_by_color_scheme, "graphml": graphml}
+
+    return {"dot": GraphmlRenderer(generic_graphml).to_dot(), "graphml": graphml_by_format}
 
 
 def log_unexpected_error(request_id, error):
@@ -148,8 +147,8 @@ def log_unexpected_error(request_id, error):
 def handle(event, context):
     request_id = context.aws_request_id
     try:
-        config_files, template_files, color_scheme_names, graphml_format = validate_request(read_request_body(event))
-        return json_response(200, generate_diagram(config_files, template_files, color_scheme_names, graphml_format))
+        config_files, template_files, graphml_format = validate_request(read_request_body(event))
+        return json_response(200, generate_diagram(config_files, template_files, graphml_format))
     except InvalidRequestError as error:
         return error_response(400, request_id, "invalid_request", str(error))
     except UserInputError as error:
