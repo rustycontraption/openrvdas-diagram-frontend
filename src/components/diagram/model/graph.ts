@@ -58,7 +58,7 @@ function stripEdgePort(edgeEndpoint: string): string {
     return edgeEndpoint.split(":")[0];
 }
 
-function readDiagramEdge(edgeElement: SVGGElement): DiagramEdge | null {
+export function readDiagramEdge(edgeElement: SVGGElement): DiagramEdge | null {
     const dotName = readDotName(edgeElement);
     const edgeEndpoints = dotName.split("->");
     if (edgeEndpoints.length !== 2) {

@@ -11,9 +11,7 @@ const YAML_FILE_TYPES = ".yml,.yaml";
 
 export default function Home() {
     const router = useRouter();
-    const {
-        configFiles, templateFiles, setConfigFiles, setTemplateFiles, colorSchemeFamily, generateDiagram,
-    } = useDiagramSession();
+    const { configFiles, templateFiles, setConfigFiles, setTemplateFiles, generateDiagram } = useDiagramSession();
     const [isGenerating, setIsGenerating] = useState(false);
     const [displayedError, setDisplayedError] = useState<DisplayedError | null>(null);
 
@@ -21,7 +19,7 @@ export default function Home() {
         setDisplayedError(null);
         setIsGenerating(true);
         try {
-            await generateDiagram(colorSchemeFamily);
+            await generateDiagram();
             router.push("/diagram");
         } catch (error) {
             setDisplayedError(toDisplayedError(error));

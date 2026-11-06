@@ -9,9 +9,7 @@ import { useDiagramSession } from "@/components/diagram/session/DiagramSessionPr
 // Shows the current diagram. After a reload it restores the saved one, or goes back to the upload page if there is none.
 export default function DiagramWorkspacePage() {
     const router = useRouter();
-    const {
-        diagram, restoreSavedDiagram, changeColorSchemeFamily, isChangingColorScheme, hasSelectedFiles, requestYedGraphml,
-    } = useDiagramSession();
+    const { diagram, restoreSavedDiagram, hasSelectedFiles } = useDiagramSession();
 
     useEffect(() => {
         if (diagram) {
@@ -30,10 +28,6 @@ export default function DiagramWorkspacePage() {
         <DiagramWorkspace
             key={diagram.id}
             diagram={diagram}
-            hasSelectedFiles={hasSelectedFiles}
-            isChangingColorScheme={isChangingColorScheme}
-            changeColorSchemeFamily={changeColorSchemeFamily}
-            requestYedGraphml={requestYedGraphml}
         />
     );
 }

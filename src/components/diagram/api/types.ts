@@ -3,14 +3,18 @@ export interface YamlFile {
     content: string;
 }
 
+export type GraphmlFormats = "generic" | "yed";
+
 export interface DiagramRequest {
     configFiles: YamlFile[];
     templateFiles: YamlFile[];
-    colorSchemes: string[];
-    graphmlFormat?: "generic" | "yed"
+    graphmlFormats: GraphmlFormats[];
 }
 
 export interface DiagramResult {
-    dotByColorScheme: Record<string, string>;
-    graphml: string;
+    dot: string;
+    graphml: Record<GraphmlFormats, string>;
 }
+
+export type DiagramResponseBody =
+    { dot: Record<string, string>; graphml: Record<GraphmlFormats, string> }

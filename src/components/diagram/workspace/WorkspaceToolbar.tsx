@@ -13,7 +13,6 @@ interface WorkspaceToolbarProps {
     onExportPng: () => void;
     onExportGraphml: () => void;
     onExportYed: () => void;
-    canExportYed: boolean;
     onToggleSettings: () => void;
 }
 
@@ -48,7 +47,7 @@ export function WorkspaceToolbar(props: WorkspaceToolbarProps) {
                         <Menu.Item onClick={props.onExportSvg}>SVG image</Menu.Item>
                         <Menu.Item onClick={props.onExportPng}>PNG image</Menu.Item>
                         <Menu.Item onClick={props.onExportGraphml}>GraphML</Menu.Item>
-                        <Menu.Item onClick={props.onExportYed} disabled={!props.canExportYed}>yEd GraphML</Menu.Item>
+                        <Menu.Item onClick={props.onExportYed}>yEd GraphML</Menu.Item>
                     </Menu.Dropdown>
                 </Menu>
 

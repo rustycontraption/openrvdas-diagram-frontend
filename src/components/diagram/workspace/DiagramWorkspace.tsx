@@ -6,9 +6,10 @@ import { Alert, useComputedColorScheme } from "@mantine/core";
 import { useLocalStorage, useMediaQuery } from "@mantine/hooks";
 import type { ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { toDisplayedError } from "@/components/diagram/api/errors";
-import type { ColorSchemeFamily } from "@/components/diagram/model/colorSchemes";
+import { COLOR_SCHEMES, DEFAULT_COLOR_SCHEME_FAMILY, isColorSchemeFamily } from "@/components/diagram/model/colorSchemes";
 import type { Diagram } from "@/components/diagram/model/diagram";
 import { findDatapathDotNames } from "@/components/diagram/model/graph";
+import { paintSvgText } from "@/components/diagram/model/paintDiagram";
 import { ColorSchemeSettings } from "./ColorSchemeSettings";
 import { DiagramCanvas } from "./DiagramCanvas";
 import { DOWNLOAD_FILE_STEM, convertSvgToPngBlob, createGraphmlBlob, createSvgBlob, downloadBlob } from "./downloads";
@@ -19,12 +20,10 @@ import { WorkspaceToolbar } from "./WorkspaceToolbar";
 import classes from "./DiagramWorkspace.module.css";
 
 const ZOOM_ANIMATION_MILLISECONDS = 200;
+const COLOR_SCHEME_FAMILY_STORAGE_KEY = "openrvdas-diagram:color-scheme-family";
 
 interface DiagramWorkspaceProps {
     diagram: Diagram;
-    hasSelectedFiles: boolean;
-    isChangingColorScheme: boolean;
-    changeColorSchemeFamily: (colorSchemeFamily: ColorSchemeFamily) => Promise<void>;
     requestYedGraphml: () => Promise<string>;
 }
 
@@ -34,7 +33,7 @@ interface DiagramWorkspaceProps {
  * resets the selection and zoom.
  */
 export function DiagramWorkspace({
-    diagram, hasSelectedFiles, isChangingColorScheme, changeColorSchemeFamily, requestYedGraphml,
+    diagram,
 }: DiagramWorkspaceProps) {
     const router = useRouter();
     const zoomControlsRef = useRef<ReactZoomPanPinchRef>(null);
@@ -44,8 +43,13 @@ export function DiagramWorkspace({
     const [isSettingsOpen, setIsSettingsOpen] = useLocalStorage({ key: "openrvdas-diagram:settings-open", defaultValue: false });
     const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState<string | null>(null);
     const [selectedNodeNames, setSelectedNodeNames] = useState<string[]>([]);
+    const [storedColorSchemeFamily, setColorSchemeFamily] = useLocalStorage<string>({
+        key: COLOR_SCHEME_FAMILY_STORAGE_KEY,
+        defaultValue: DEFAULT_COLOR_SCHEME_FAMILY,
+    });
 
-    const svg = diagram.svgByTheme[theme];
+    const colorSchemeFamily = isColorSchemeFamily(storedColorSchemeFamily) ? storedColorSchemeFamily : DEFAULT_COLOR_SCHEME_FAMILY;
+    const colorScheme = COLOR_SCHEMES[colorSchemeFamily][theme];
     const highlightedDotNames = useMemo(
         () => findDatapathDotNames(diagram.datapaths, selectedNodeNames),
         [diagram.datapaths, selectedNodeNames],
@@ -72,30 +76,19 @@ export function DiagramWorkspace({
             ? getComputedStyle(canvasElementRef.current).backgroundColor
             : "white";
         try {
-            downloadBlob(await convertSvgToPngBlob(svg, backgroundColor), `${DOWNLOAD_FILE_STEM}.png`);
+            const coloredSvg = paintSvgText(diagram.svg, colorScheme);
+            downloadBlob(await convertSvgToPngBlob(coloredSvg, backgroundColor), `${DOWNLOAD_FILE_STEM}.png`);
         } catch (error) {
             console.error(error);
             setWorkspaceErrorMessage("The PNG could not be created. Try the SVG export instead.");
         }
     }
 
-    async function changeColorScheme(colorSchemeFamily: ColorSchemeFamily) {
-        setWorkspaceErrorMessage(null);
-        try {
-            await changeColorSchemeFamily(colorSchemeFamily);
-        } catch (error) {
-            setWorkspaceErrorMessage(`The color scheme could not be changed. ${toDisplayedError(error).message}`);
-        }
+    function exportSvg() {
+        const coloredSvg = paintSvgText(diagram.svg, colorScheme);
+        downloadBlob(createSvgBlob(coloredSvg), `${DOWNLOAD_FILE_STEM}.svg`);
     }
 
-    async function exportYedGraphml() {
-        setWorkspaceErrorMessage(null);
-        try {
-            downloadBlob(createGraphmlBlob(await requestYedGraphml()), `${DOWNLOAD_FILE_STEM}-yed.graphml`);
-        } catch (error) {
-            setWorkspaceErrorMessage(`The yEd file could not be created. ${toDisplayedError(error).message}`);
-        }
-    }
 
     return (
         <div className={classes.workspace}>
@@ -106,14 +99,12 @@ export function DiagramWorkspace({
                 onZoomIn={() => zoomControlsRef.current?.zoomIn(undefined, ZOOM_ANIMATION_MILLISECONDS)}
                 onZoomOut={() => zoomControlsRef.current?.zoomOut(undefined, ZOOM_ANIMATION_MILLISECONDS)}
                 onFitToScreen={() => zoomControlsRef.current?.fitToView({ animationTime: ZOOM_ANIMATION_MILLISECONDS })}
-                onExportSvg={() => downloadBlob(createSvgBlob(svg), `${DOWNLOAD_FILE_STEM}.svg`)}
+                onExportSvg={exportSvg}
                 onExportPng={exportPng}
-                onExportGraphml={() => downloadBlob(createGraphmlBlob(diagram.graphml), `${DOWNLOAD_FILE_STEM}.graphml`)}
-                onExportYed={exportYedGraphml}
-                canExportYed={hasSelectedFiles}
+                onExportGraphml={() => downloadBlob(createGraphmlBlob(diagram.graphml.generic), `${DOWNLOAD_FILE_STEM}.graphml`)}
+                onExportYed={() => downloadBlob(createGraphmlBlob(diagram.graphml.yed), `${DOWNLOAD_FILE_STEM}.graphml`)}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
             />
-            {!hasSelectedFiles && <FilesUnavailableNotice onAddFiles={() => router.push("/")} />}
             {workspaceErrorMessage && (
                 <Alert color="red" withCloseButton onClose={() => setWorkspaceErrorMessage(null)} radius={0}>
                     {workspaceErrorMessage}
@@ -123,16 +114,15 @@ export function DiagramWorkspace({
                 <DiagramCanvas
                     ref={zoomControlsRef}
                     canvasElementRef={canvasElementRef}
-                    svgRoot={diagram.svgRootByTheme[theme]}
+                    svgRoot={diagram.svgRoot}
+                    colorScheme={colorScheme}
                     highlightedDotNames={highlightedDotNames}
                     onNodeClick={selectOnlyNode}
                 />
                 <SettingsPanel isOpen={isSettingsOpen} isNarrowScreen={isNarrowScreen} onClose={() => setIsSettingsOpen(false)}>
                     <ColorSchemeSettings
-                        colorSchemeFamily={diagram.colorSchemeFamily}
-                        onColorSchemeFamilyChange={changeColorScheme}
-                        isChangingColorScheme={isChangingColorScheme}
-                        canChangeColorScheme={hasSelectedFiles}
+                        colorSchemeFamily={colorSchemeFamily}
+                        onColorSchemeFamilyChange={setColorSchemeFamily}
                     />
                     <NodeFilters
                         nodes={diagram.nodes}

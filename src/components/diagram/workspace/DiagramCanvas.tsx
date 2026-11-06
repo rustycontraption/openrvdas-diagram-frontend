@@ -1,6 +1,8 @@
 import { forwardRef, useLayoutEffect, useMemo, useRef, type MouseEvent, type Ref } from "react";
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
+import type { ColorScheme } from "@/components/diagram/model/colorSchemes";
 import { findNodeElement, readDotName, readElementsByDotName } from "@/components/diagram/model/graph";
+import { paintDiagram } from "@/components/diagram/model/paintDiagram";
 import classes from "./DiagramCanvas.module.css";
 
 const MINIMUM_ZOOM = 0.05;
@@ -8,17 +10,19 @@ const MAXIMUM_ZOOM = 8;
 
 interface DiagramCanvasProps {
     svgRoot: SVGSVGElement;
+    colorScheme: ColorScheme;
     highlightedDotNames: Set<string>;
     onNodeClick: (dotName: string) => void;
     canvasElementRef?: Ref<HTMLDivElement>;
 }
 
 /**
- * Shows the diagram SVG with zoom and pan. This is the only component that changes the SVG: it adds the highlight
- * class to the highlighted nodes and edges, and removes it again when the highlight or the shown SVG changes.
+ * Shows the diagram SVG with zoom and pan. This is the only component that changes the SVG: it paints the colors
+ * of the current color scheme, and adds the highlight class to the highlighted nodes and edges. The highlight is
+ * CSS, so it shows over any color scheme.
  */
 export const DiagramCanvas = forwardRef<ReactZoomPanPinchRef, DiagramCanvasProps>(function DiagramCanvas(
-    { svgRoot, highlightedDotNames, onNodeClick, canvasElementRef },
+    { svgRoot, colorScheme, highlightedDotNames, onNodeClick, canvasElementRef },
     zoomControlsRef,
 ) {
     const diagramContainerRef = useRef<HTMLDivElement>(null);
@@ -27,6 +31,10 @@ export const DiagramCanvas = forwardRef<ReactZoomPanPinchRef, DiagramCanvasProps
     useLayoutEffect(() => {
         diagramContainerRef.current?.replaceChildren(svgRoot);
     }, [svgRoot]);
+
+    useLayoutEffect(() => {
+        paintDiagram(svgRoot, colorScheme);
+    }, [svgRoot, colorScheme]);
 
     useLayoutEffect(() => {
         const highlightedElements = [...highlightedDotNames]
