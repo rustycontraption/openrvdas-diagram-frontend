@@ -37,3 +37,7 @@
     fill: #ff0000;
     stroke: #ff0000;
 }
+
+.highlighted:is(:global(.node), :global(.edge)) text {
+    fill: #ffffff;
+}
