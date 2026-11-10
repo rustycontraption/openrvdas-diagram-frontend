@@ -4,16 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Container, FileInput, Stack, Text, Title } from "@mantine/core";
 import classes from "@/components/Page.module.css";
-import { toDisplayedError, type DisplayedError } from "@/diagramApi/displayedError";
-import { useDiagramSession } from "@/diagramSession/DiagramSessionProvider";
+import { toDisplayedError, type DisplayedError } from "@/components/diagram/api/errors";
+import { useDiagramSession } from "@/components/diagram/session/DiagramSessionProvider";
 
 const YAML_FILE_TYPES = ".yml,.yaml";
 
 export default function Home() {
     const router = useRouter();
-    const {
-        configFiles, templateFiles, setConfigFiles, setTemplateFiles, colorSchemeFamily, generateDiagram,
-    } = useDiagramSession();
+    const { configFiles, templateFiles, setConfigFiles, setTemplateFiles, generateDiagram } = useDiagramSession();
     const [isGenerating, setIsGenerating] = useState(false);
     const [displayedError, setDisplayedError] = useState<DisplayedError | null>(null);
 
@@ -21,7 +19,7 @@ export default function Home() {
         setDisplayedError(null);
         setIsGenerating(true);
         try {
-            await generateDiagram(colorSchemeFamily);
+            await generateDiagram();
             router.push("/diagram");
         } catch (error) {
             setDisplayedError(toDisplayedError(error));

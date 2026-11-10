@@ -1,5 +1,5 @@
-import { ApiErrorResponse, DiagramApiError, DiagramRequest, DiagramResult } from "./types";
-import { userMessageFor } from "./userMessages";
+import { DiagramApiError, userMessageFor, type ApiErrorResponse } from "./errors";
+import type { DiagramRequest, DiagramResponseBody, DiagramResult } from "./types";
 
 // Matches the diagram API's limit, so oversized uploads fail fast without a round trip
 const MAXIMUM_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -37,7 +37,7 @@ async function readErrorResponse(response: Response): Promise<DiagramApiError> {
 
 export async function requestDiagram(request: DiagramRequest): Promise<DiagramResult> {
     checkRequest(request);
-
+    console.log(request);
     let response: Response;
     try {
         response = await fetch(diagramEndpoint(), {
@@ -52,20 +52,5 @@ export async function requestDiagram(request: DiagramRequest): Promise<DiagramRe
     if (!response.ok) {
         throw await readErrorResponse(response);
     }
-    return withDotForEveryColorScheme(await response.json(), request.colorSchemes);
-}
-
-/**
- * Diagram services from before color schemes existed return a single `dot`; use it for every requested scheme
- * so the site keeps working while the service is being updated.
- */
-function withDotForEveryColorScheme(
-    responseBody: DiagramResult | { dot: string; graphml: string },
-    colorSchemes: string[],
-): DiagramResult {
-    if ("dotByColorScheme" in responseBody) {
-        return responseBody;
-    }
-    const dotByColorScheme = Object.fromEntries(colorSchemes.map((colorScheme) => [colorScheme, responseBody.dot]));
-    return { dotByColorScheme, graphml: responseBody.graphml };
+    return response.json();
 }

@@ -1,0 +1,17 @@
+.toolbar {
+    flex: none;
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+    border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+.summary {
+    color: var(--mantine-color-dimmed);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    @media (max-width: $mantine-breakpoint-sm) {
+        display: none;
+    }
+}
