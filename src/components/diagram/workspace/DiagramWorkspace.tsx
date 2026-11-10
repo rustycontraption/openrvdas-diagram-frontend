@@ -52,22 +52,22 @@ export function DiagramWorkspace({
         [diagram.datapaths, selectedNodeNames],
     );
 
-    function selectOnlyNode(dotName: string) {
+    function handleNodeClick(dotName: string) {
         setSelectedNodeNames([dotName]);
     }
 
-    function toggleNode(dotName: string) {
+    function handleToggleNode(dotName: string) {
         setSelectedNodeNames((previouslySelectedNames) => previouslySelectedNames.includes(dotName)
             ? previouslySelectedNames.filter((selectedName) => selectedName !== dotName)
             : [...previouslySelectedNames, dotName]);
     }
 
-    function deselectNode(dotName: string) {
+    function handleDeselectNode(dotName: string) {
         setSelectedNodeNames((previouslySelectedNames) =>
             previouslySelectedNames.filter((selectedName) => selectedName !== dotName));
     }
 
-    async function exportPng() {
+    async function handleExportPng() {
         // The SVG is transparent, so the PNG gets the background it is shown on
         const backgroundColor = canvasElementRef.current
             ? getComputedStyle(canvasElementRef.current).backgroundColor
@@ -81,7 +81,7 @@ export function DiagramWorkspace({
         }
     }
 
-    function exportSvg() {
+    function handleExportSvg() {
         const coloredSvg = paintSvgText(diagram.svg, colorScheme);
         downloadBlob(createSvgBlob(coloredSvg), `${DOWNLOAD_FILE_STEM}.svg`);
     }
@@ -96,8 +96,8 @@ export function DiagramWorkspace({
                 onZoomIn={() => zoomControlsRef.current?.zoomIn(undefined, ZOOM_ANIMATION_MILLISECONDS)}
                 onZoomOut={() => zoomControlsRef.current?.zoomOut(undefined, ZOOM_ANIMATION_MILLISECONDS)}
                 onFitToScreen={() => zoomControlsRef.current?.fitToView({ animationTime: ZOOM_ANIMATION_MILLISECONDS })}
-                onExportSvg={exportSvg}
-                onExportPng={exportPng}
+                onExportSvg={handleExportSvg}
+                onExportPng={handleExportPng}
                 onExportGraphml={() => downloadBlob(createGraphmlBlob(diagram.graphml.generic), `${DOWNLOAD_FILE_STEM}.graphml`)}
                 onExportYed={() => downloadBlob(createGraphmlBlob(diagram.graphml.yed), `${DOWNLOAD_FILE_STEM}.graphml`)}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
@@ -114,7 +114,7 @@ export function DiagramWorkspace({
                     svgRoot={diagram.svgRoot}
                     colorScheme={colorScheme}
                     highlightedDotNames={highlightedDotNames}
-                    onNodeClick={selectOnlyNode}
+                    onNodeClick={handleNodeClick}
                 />
                 <SettingsPanel isOpen={isSettingsOpen} isNarrowScreen={isNarrowScreen} onClose={() => setIsSettingsOpen(false)}>
                     <ColorSchemeSettings
@@ -124,8 +124,8 @@ export function DiagramWorkspace({
                     <NodeFilters
                         nodes={diagram.nodes}
                         selectedNodeNames={selectedNodeNames}
-                        onToggleNode={toggleNode}
-                        onDeselectNode={deselectNode}
+                        onToggleNode={handleToggleNode}
+                        onDeselectNode={handleDeselectNode}
                     />
                 </SettingsPanel>
             </div>
