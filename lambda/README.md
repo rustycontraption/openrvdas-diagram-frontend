@@ -1,8 +1,7 @@
 # openrvdas-diagram-lambda
 
-The backend for openrvdas-diagram-site. It is a private AWS Lambda, reached only through an API Gateway HTTP API, that runs
-[openrvdas-diagram](https://github.com/rustycontraption/openrvdas-diagram) as a library. The tool itself stays a
-standalone command line tool; everything AWS-specific lives here.
+The backend for openrvdas-diagram-frontend. It is a private AWS Lambda, reached only through an API Gateway HTTP API, that runs
+[openrvdas-diagram](https://github.com/rustycontraption/openrvdas-diagram) as a library.
 
 ## API
 
@@ -12,23 +11,20 @@ standalone command line tool; everything AWS-specific lives here.
 {
   "configFiles":   [{ "name": "ship.yaml", "content": "..." }],
   "templateFiles": [{ "name": "dsLog_templates.yml", "content": "..." }],
-  "colorSchemes":  ["classic-light", "classic-dark"],
-  "graphmlFormat": "generic"
+  "graphmlFormats": ["generic", "yed"]
 }
 ```
 
-`templateFiles` is optional. Every name must end in `.yml` or `.yaml`, and the combined size is limited to 4 MB.
+`templateFiles` is optional if the config files don't include any. Every name must end in `.yml` or `.yaml`, and the combined size is limited to 4 MB.
 
-`colorSchemes` names the openrvdas-diagram color schemes to draw (`classic-light`, `classic-dark`, `viridis-light`,
-`viridis-dark`), and DOT is returned for just those, so the response doesn't grow with the number of schemes. It is
-optional; without it, only the tool's default scheme (`classic-light`) is returned.
+`graphmlFormats` lists the GraphML formats to return, each `generic` or `yed`. It is optional; without it, only
+`generic` is returned. Duplicates are ignored. The site asks for both, so a GraphML download doesn't need a second
+request.
 
-`graphmlFormat` is `generic` (the default) or `yed`, and sets the format of the `graphml` in the response. The DOT is
-always drawn from generic GraphML.
 
 | Status | Body |
 |---|---|
-| 200 | `{ "dotByColorScheme": { "classic-light": "digraph {...}", ... }, "graphml": "..." }`. Each DOT has a transparent background; the browser lays it out and draws it with Graphviz compiled to WebAssembly |
+| 200 | `{ "dot": "digraph {...}", "graphml": { "generic": "<graphml...>", "yed": "<graphml...>" } }`. `graphml` has one entry per requested format. The browser lays out the DOT and draws it with Graphviz compiled to WebAssembly |
 | 400 | `{ "error": { "code": "invalid_request", "message", "requestId" } }` |
 | 422 | `{ "error": { "code", "message", "details", "requestId" } }`. A problem in the uploaded files, with an openrvdas-diagram error code such as `missing_template_file` |
 | 500 | `{ "error": { "code": "internal_error", "message", "requestId" } }`. Details are only in the CloudWatch log line with the same `requestId` |
@@ -42,7 +38,7 @@ always drawn from generic GraphML.
   ```
   git/
   ├── openrvdas-diagram/        # the tool
-  └── openrvdas-diagram-site/   # this repo (lambda/ is inside it)
+  └── openrvdas-diagram-frontend/   # this repo (lambda/ is inside it)
   ```
   If you don't have it yet, from the folder that contains this repo:
   ```bash
@@ -59,13 +55,13 @@ cd lambda
 python3 -m venv .venv
 source .venv/bin/activate
 # Install the local tool checkout first, so changes to the tool are picked up immediately
-pip install -e ../../openrvdas-diagram pytest
+pip install -e ../../openrvdas-diagram
 # Then this package, without letting pip replace the local tool with the version pinned in src/requirements.txt
 pip install --no-deps -e .
 ```
 
 To use the version pinned in `src/requirements.txt` instead of a local checkout, replace the two `pip install`
-lines with `pip install -e '.[dev]'`.
+lines with `pip install -e .`.
 
 The `.venv` folder is specific to your machine and is not checked in.
 
@@ -75,11 +71,6 @@ Activate the venv before running anything below:
 ```bash
 cd lambda
 source .venv/bin/activate
-```
-
-### Run the tests
-```bash
-pytest
 ```
 
 ### Run the fake Lambda backend
@@ -109,7 +100,7 @@ API Gateway HTTP API (openrvdas-diagram-api)  →  Lambda (openrvdas-diagram)  +
 |---|---|
 | API Gateway HTTP API `openrvdas-diagram-api` | Invoke URL `https://lz16vybqb0.execute-api.us-west-2.amazonaws.com`. Route `POST /diagram` → the Lambda (payload format 2.0). `$default` stage with auto-deploy. CORS: origin `https://main.d25weeqazuz5d2.amplifyapp.com`, method `POST`, header `content-type`. Default route throttling: burst 10, rate 5 requests per second. |
 | Lambda function `openrvdas-diagram` | Python 3.12, x86_64. Handler `lambda_function.handle`: the console's `lambda_function.py` holds the contents of `src/openrvdas_diagram_lambda/handler.py`. Timeout 29 seconds (the HTTP API gives up after 30). Reserved concurrency 5. No Function URL; its resource-based policy only allows the HTTP API to invoke it. |
-| Lambda layer `openrvdas-diagram-layer` | openrvdas-diagram at the release pinned in `src/requirements.txt` (currently v0.1.0), plus PyYAML and graphviz, under `python/`. Each upload is a new numbered version; the function uses one specific version. |
+| Lambda layer `openrvdas-diagram-layer` | openrvdas-diagram at the release pinned in `src/requirements.txt` (currently v0.2.0), plus PyYAML and graphviz, under `python/`. Each upload is a new numbered version; the function uses one specific version. |
 | Logs | CloudWatch log group `/aws/lambda/openrvdas-diagram`. Unexpected errors are JSON lines with `"event": "diagram_generation_failed"` and the `requestId` users see as their reference ID. API Gateway access logs are not enabled. |
 
 Things to keep in mind:
@@ -157,7 +148,7 @@ curl -i -H 'Content-Type: application/json' \
   https://lz16vybqb0.execute-api.us-west-2.amazonaws.com/diagram
 ```
 
-It should return `200` with `dot` and `graphml`. To test the function alone from its **Test** tab, use this event:
+It should return `200` with `dot` and `graphml`, where `graphml` holds only `generic` since no formats were requested. To test the function alone from its **Test** tab, use this event:
 
 ```json
 {"body": "{\"configFiles\":[{\"name\":\"ship.yaml\",\"content\":\"loggers: {}\\n\"}]}", "isBase64Encoded": false}
