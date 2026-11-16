@@ -40,6 +40,7 @@ export function DiagramWorkspace({
     const [isSettingsOpen, setIsSettingsOpen] = useLocalStorage({ key: "openrvdas-diagram:settings-open", defaultValue: false });
     const [workspaceErrorMessage, setWorkspaceErrorMessage] = useState<string | null>(null);
     const [selectedNodeNames, setSelectedNodeNames] = useState<string[]>([]);
+    const [filteredNodeNames, setFilteredNodeNames] = useState<string[]>([]);
     const [storedColorSchemeFamily, setColorSchemeFamily] = useLocalStorage<string>({
         key: COLOR_SCHEME_FAMILY_STORAGE_KEY,
         defaultValue: DEFAULT_COLOR_SCHEME_FAMILY,
@@ -51,19 +52,27 @@ export function DiagramWorkspace({
         () => findDatapathDotNames(diagram.datapaths, selectedNodeNames),
         [diagram.datapaths, selectedNodeNames],
     );
+    const filteredDotNames = useMemo(
+        () => findDatapathDotNames(diagram.datapaths, filteredNodeNames),
+        [diagram.datapaths, filteredNodeNames],
+    );
 
     function handleNodeClick(dotName: string) {
         setSelectedNodeNames([dotName]);
     }
 
+    function handleBackgroundClick() {
+        setSelectedNodeNames([]);
+    }
+
     function handleToggleNode(dotName: string) {
-        setSelectedNodeNames((previouslySelectedNames) => previouslySelectedNames.includes(dotName)
+        setFilteredNodeNames((previouslySelectedNames) => previouslySelectedNames.includes(dotName)
             ? previouslySelectedNames.filter((selectedName) => selectedName !== dotName)
             : [...previouslySelectedNames, dotName]);
     }
 
     function handleDeselectNode(dotName: string) {
-        setSelectedNodeNames((previouslySelectedNames) =>
+        setFilteredNodeNames((previouslySelectedNames) =>
             previouslySelectedNames.filter((selectedName) => selectedName !== dotName));
     }
 
@@ -114,7 +123,9 @@ export function DiagramWorkspace({
                     svgRoot={diagram.svgRoot}
                     colorScheme={colorScheme}
                     highlightedDotNames={highlightedDotNames}
+                    filteredDotNames={filteredDotNames}
                     onNodeClick={handleNodeClick}
+                    onBackgroundClick={handleBackgroundClick}
                 />
                 <SettingsPanel isOpen={isSettingsOpen} isNarrowScreen={isNarrowScreen} onClose={() => setIsSettingsOpen(false)}>
                     <ColorSchemeSettings
@@ -123,7 +134,7 @@ export function DiagramWorkspace({
                     />
                     <NodeFilters
                         nodes={diagram.nodes}
-                        selectedNodeNames={selectedNodeNames}
+                        selectedNodeNames={filteredNodeNames}
                         onToggleNode={handleToggleNode}
                         onDeselectNode={handleDeselectNode}
                     />

@@ -14,7 +14,7 @@ export interface DiagramNode {
 }
 
 export interface DiagramEdge {
-    // Like "node_0:out_0:e->node_2:in_0:w", unique because every edge has its own ports
+    // Like "node_0:e->node_2:w". Graphviz drops port names from SVG titles, so two edges between the same nodes share one
     dotName: string;
     tailNodeName: string;
     headNodeName: string;
@@ -40,9 +40,14 @@ export function findNodeElement(target: Element): SVGGElement | null {
     return target.closest<SVGGElement>(NODE_SELECTOR);
 }
 
-export function readElementsByDotName(svgRoot: SVGSVGElement): Map<string, SVGGElement> {
-    const elements = [...svgRoot.querySelectorAll<SVGGElement>(`${NODE_SELECTOR}, ${EDGE_SELECTOR}`)];
-    return new Map(elements.map((element) => [readDotName(element), element]));
+// Two edges between the same pair of nodes share a DOT name, so each name can have several elements
+export function readElementsByDotName(svgRoot: SVGSVGElement): Map<string, SVGGElement[]> {
+    const elementsByDotName = new Map<string, SVGGElement[]>();
+    for (const element of svgRoot.querySelectorAll<SVGGElement>(`${NODE_SELECTOR}, ${EDGE_SELECTOR}`)) {
+        const dotName = readDotName(element);
+        elementsByDotName.set(dotName, [...(elementsByDotName.get(dotName) ?? []), element]);
+    }
+    return elementsByDotName;
 }
 
 function readDiagramNode(nodeElement: SVGGElement): DiagramNode {

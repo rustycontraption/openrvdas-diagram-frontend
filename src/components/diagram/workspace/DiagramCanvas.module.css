@@ -41,3 +41,8 @@
 .highlighted:is(:global(.node), :global(.edge)) text {
     fill: #ffffff;
 }
+
+.faded {
+    opacity: 0.15;
+    pointer-events: none;
+}
