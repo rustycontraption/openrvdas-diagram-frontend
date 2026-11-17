@@ -40,7 +40,7 @@ function FilterCombobox({ optionNodes, selectedNodeNames, onToggleNode, onDesele
     ));
 
     return (
-        <Combobox store={combobox} onOptionSubmit={onToggleNode} withinPortal={false}>
+        <Combobox store={combobox} onOptionSubmit={onToggleNode} withinPortal={false} width="max-content">
             <Combobox.DropdownTarget>
                 <PillsInput pointer onClick={() => combobox.toggleDropdown()}>
                     <Pill.Group>
