@@ -1,5 +1,5 @@
 import { DiagramApiError, userMessageFor, type ApiErrorResponse } from "./errors";
-import type { DiagramRequest, DiagramResponseBody, DiagramResult } from "./types";
+import type { DiagramRequest, DiagramResult } from "./types";
 
 // Matches the diagram API's limit, so oversized uploads fail fast without a round trip
 const MAXIMUM_UPLOAD_BYTES = 4 * 1024 * 1024;

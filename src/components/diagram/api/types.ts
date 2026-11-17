@@ -15,6 +15,3 @@ export interface DiagramResult {
     dot: string;
     graphml: Record<GraphmlFormats, string>;
 }
-
-export type DiagramResponseBody =
-    { dot: Record<string, string>; graphml: Record<GraphmlFormats, string> }
