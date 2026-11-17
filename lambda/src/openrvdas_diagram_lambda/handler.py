@@ -79,7 +79,6 @@ def is_yaml_file_list(value):
 
 
 def validate_graphml_formats(graphml_formats):
-    print("test",graphml_formats)
     if not graphml_formats:
         return [GRAPHML_FORMAT_GENERIC]
     for format in graphml_formats:

@@ -37,7 +37,6 @@ async function readErrorResponse(response: Response): Promise<DiagramApiError> {
 
 export async function requestDiagram(request: DiagramRequest): Promise<DiagramResult> {
     checkRequest(request);
-    console.log(request);
     let response: Response;
     try {
         response = await fetch(diagramEndpoint(), {
