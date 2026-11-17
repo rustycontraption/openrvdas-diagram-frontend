@@ -76,6 +76,10 @@ export function DiagramWorkspace({
             previouslySelectedNames.filter((selectedName) => selectedName !== dotName));
     }
 
+    function handleClearFilters() {
+        setFilteredNodeNames([]);
+    }
+
     async function handleExportPng() {
         // The SVG is transparent, so the PNG gets the background it is shown on
         const backgroundColor = canvasElementRef.current
@@ -137,6 +141,7 @@ export function DiagramWorkspace({
                         selectedNodeNames={filteredNodeNames}
                         onToggleNode={handleToggleNode}
                         onDeselectNode={handleDeselectNode}
+                        onClearFilters={handleClearFilters}
                     />
                 </SettingsPanel>
             </div>
