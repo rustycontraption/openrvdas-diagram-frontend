@@ -61,8 +61,6 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         });
     }, [configFiles, templateFiles, showDiagram]);
 
-    const hasSelectedFiles = configFiles.length > 0;
-
     const restoreSavedDiagram = useCallback(async () => {
         const savedDiagram = loadSavedDiagram();
         if (!savedDiagram) {
@@ -77,12 +75,11 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         templateFiles,
         setConfigFiles,
         setTemplateFiles,
-        hasSelectedFiles,
         diagram,
         generateDiagram,
         restoreSavedDiagram,
     }), [
-        configFiles, templateFiles, hasSelectedFiles, diagram, generateDiagram, restoreSavedDiagram,
+        configFiles, templateFiles, diagram, generateDiagram, restoreSavedDiagram,
     ]);
 
     return <DiagramSessionContext.Provider value={session}>{children}</DiagramSessionContext.Provider>;
