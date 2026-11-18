@@ -11,7 +11,6 @@ interface DiagramSession {
     templateFiles: File[];
     setConfigFiles: (files: File[]) => void;
     setTemplateFiles: (files: File[]) => void;
-    hasSelectedFiles: boolean;
     diagram: Diagram | null;
     generateDiagram: () => Promise<void>;
     restoreSavedDiagram: () => Promise<boolean>;
