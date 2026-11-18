@@ -6,7 +6,6 @@ import tempfile
 import traceback
 from pathlib import Path
 
-from openrvdas_diagram.color_schemes import COLOR_SCHEMES, DEFAULT_COLOR_SCHEME_NAME, get_color_scheme
 from openrvdas_diagram.errors import UserInputError
 from openrvdas_diagram.graphml_builder import GRAPHML_FORMAT_GENERIC, SUPPORTED_GRAPHML_FORMATS, GraphmlBuilder
 from openrvdas_diagram.graphml_renderer import GraphmlRenderer
@@ -60,22 +59,6 @@ def is_yaml_file_list(value):
         and YAML_FILE_PATTERN.search(file["name"])
         for file in value
     )
-
-
-# def validate_color_scheme_names(color_scheme_names):
-#     if color_scheme_names is None:
-#         # Requests from before color schemes existed get the tool's default scheme
-#         return [DEFAULT_COLOR_SCHEME_NAME]
-#     if not isinstance(color_scheme_names, list) or not color_scheme_names:
-#         raise InvalidRequestError("colorSchemes must be a non-empty list of color scheme names.")
-#     unknown_names = [name for name in color_scheme_names if name not in COLOR_SCHEMES]
-#     if unknown_names:
-#         raise InvalidRequestError(
-#             f"Unknown color schemes: {', '.join(map(str, unknown_names))}. Valid names are: {', '.join(COLOR_SCHEMES)}."
-#         )
-#     if len(set(color_scheme_names)) != len(color_scheme_names):
-#         raise InvalidRequestError("colorSchemes must not name the same color scheme twice.")
-#     return color_scheme_names
 
 
 def validate_graphml_formats(graphml_formats):
