@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Container, FileInput, Stack, Text, Title } from "@mantine/core";
+import { Alert, Button, Container, FileInput, Stack, Text } from "@mantine/core";
 import classes from "@/components/Page.module.css";
 import { toDisplayedError, type DisplayedError } from "@/components/diagram/api/errors";
 import { useDiagramSession } from "@/components/diagram/session/DiagramSessionProvider";
