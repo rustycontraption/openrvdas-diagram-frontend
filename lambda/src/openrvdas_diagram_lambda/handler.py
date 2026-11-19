@@ -64,11 +64,12 @@ def is_yaml_file_list(value):
 def validate_graphml_formats(graphml_formats):
     if not graphml_formats:
         return [GRAPHML_FORMAT_GENERIC]
-    for format in graphml_formats:
-        if format not in SUPPORTED_GRAPHML_FORMATS:
-            raise InvalidRequestError(
-                f"graphmlFormat must be one of: {', '.join(SUPPORTED_GRAPHML_FORMATS)}."
-            )
+    supported_formats = ", ".join(SUPPORTED_GRAPHML_FORMATS)
+    if not isinstance(graphml_formats, list):
+        raise InvalidRequestError(f"graphmlFormats must be a list of: {supported_formats}.")
+    for graphml_format in graphml_formats:
+        if graphml_format not in SUPPORTED_GRAPHML_FORMATS:
+            raise InvalidRequestError(f"graphmlFormats must be a list of: {supported_formats}.")
     return list(set(graphml_formats))
 
 
