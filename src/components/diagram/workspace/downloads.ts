@@ -1,19 +1,20 @@
-import type { Graphviz } from "@hpcc-js/wasm-graphviz";
+export const DOWNLOAD_FILE_STEM = "data-flow-generated";
 
+const GRAPHML_MIME_TYPE = "application/xml";
 const SVG_MIME_TYPE = "image/svg+xml";
 const PNG_MIME_TYPE = "image/png";
 
-let graphvizLoading: Promise<Graphviz> | null = null;
-
-// The WebAssembly build of Graphviz is large, so it is only downloaded the first time a diagram is drawn
-function loadGraphviz(): Promise<Graphviz> {
-    graphvizLoading ??= import("@hpcc-js/wasm-graphviz").then(({ Graphviz }) => Graphviz.load());
-    return graphvizLoading;
+export function downloadBlob(blob: Blob, fileName: string) {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(blobUrl);
 }
 
-export async function renderSvg(dot: string): Promise<string> {
-    const graphviz = await loadGraphviz();
-    return graphviz.dot(dot);
+export function createGraphmlBlob(graphml: string): Blob {
+    return new Blob([graphml], { type: GRAPHML_MIME_TYPE });
 }
 
 export function createSvgBlob(svg: string): Blob {

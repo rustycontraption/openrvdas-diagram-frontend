@@ -10,7 +10,7 @@ export default function Footer() {
                     © 2026 Anne Julian
                 </Group>
                 <Group>
-                    <a href="https://github.com/rustycontraption/openrvdas-diagram" aria-label="openrvdas-diagram on GitHub"><FaGithub size={22} /></a>
+                    <a href="https://github.com/rustycontraption/openrvdas-diagram-frontend" aria-label="This web tool on GitHub"><FaGithub size={22} /></a>
                 </Group>
             </Container>
         </footer>

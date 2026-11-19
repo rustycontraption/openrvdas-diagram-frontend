@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { createTheme, MantineProvider, CSSVariablesResolver } from '@mantine/core';
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { DiagramSessionProvider } from "@/diagramSession/DiagramSessionProvider";
+import { DiagramSessionProvider } from "@/components/diagram/session/DiagramSessionProvider";
 
 const FULL_WINDOW_PATHS = ["/diagram"];
 
@@ -45,7 +45,7 @@ export default function AppProviders({
     <MantineProvider theme={theme} cssVariablesResolver={resolver}>
       <DiagramSessionProvider>
         <Header />
-        <div style={isFullWindowPage ? undefined : { padding: '2% 5%' }}>
+        <div style={isFullWindowPage ? { flex: 1 } : { padding: '2% 5%', flex: 1 }}>
           {children}
         </div>
         {!isFullWindowPage && <Footer />}

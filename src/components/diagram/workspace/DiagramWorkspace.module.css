@@ -1,0 +1,12 @@
+.workspace {
+    height: calc(100dvh - 56px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
