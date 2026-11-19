@@ -38,8 +38,11 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
     // Only the most recent request may replace the diagram, in case requests overlap
     const latestRequestNumber = useRef(0);
 
-    const showDiagram = useCallback(async (savedDiagram: SavedDiagram) => {
+    const showDiagram = useCallback(async (savedDiagram: SavedDiagram, requestNumber: number) => {
         const diagram = await buildDiagram(savedDiagram, nextDiagramId.current++);
+        if (requestNumber !== latestRequestNumber.current) {
+            return;
+        }
         setDiagram(diagram);
         saveDiagram(savedDiagram);
     }, []);
@@ -51,14 +54,11 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
             templateFiles: await readYamlFiles(templateFiles),
             graphmlFormats: ["generic", "yed"]
         });
-        if (requestNumber !== latestRequestNumber.current) {
-            return;
-        }
         await showDiagram({
             dot: result.dot,
             graphml: result.graphml,
             summary: describeUpload(configFiles.length, templateFiles.length),
-        });
+        }, requestNumber);
     }, [configFiles, templateFiles, showDiagram]);
 
     const restoreSavedDiagram = useCallback(async () => {
@@ -66,7 +66,7 @@ export function DiagramSessionProvider({ children }: { children: React.ReactNode
         if (!savedDiagram) {
             return false;
         }
-        await showDiagram(savedDiagram);
+        await showDiagram(savedDiagram, ++latestRequestNumber.current);
         return true;
     }, [showDiagram]);
 
