@@ -100,7 +100,7 @@ API Gateway HTTP API (openrvdas-diagram-api)  →  Lambda (openrvdas-diagram)  +
 |---|---|
 | API Gateway HTTP API `openrvdas-diagram-api` | Invoke URL `https://lz16vybqb0.execute-api.us-west-2.amazonaws.com`. Route `POST /diagram` → the Lambda (payload format 2.0). `$default` stage with auto-deploy. CORS: origin `https://main.d25weeqazuz5d2.amplifyapp.com`, method `POST`, header `content-type`. Default route throttling: burst 10, rate 5 requests per second. |
 | Lambda function `openrvdas-diagram` | Python 3.12, x86_64. Handler `lambda_function.handle`: the console's `lambda_function.py` holds the contents of `src/openrvdas_diagram_lambda/handler.py`. Timeout 29 seconds (the HTTP API gives up after 30). Reserved concurrency 5. No Function URL; its resource-based policy only allows the HTTP API to invoke it. |
-| Lambda layer `openrvdas-diagram-layer` | openrvdas-diagram at the release pinned in `src/requirements.txt` (currently v0.2.0), plus PyYAML and graphviz, under `python/`. Each upload is a new numbered version; the function uses one specific version. |
+| Lambda layer `openrvdas-diagram-layer` | openrvdas-diagram at the release pinned in `src/requirements.txt`, plus PyYAML and graphviz, under `python/`. Each upload is a new numbered version; the function uses one specific version. |
 | Logs | CloudWatch log group `/aws/lambda/openrvdas-diagram`. Unexpected errors are JSON lines with `"event": "diagram_generation_failed"` and the `requestId` users see as their reference ID. API Gateway access logs are not enabled. |
 
 Things to keep in mind:
