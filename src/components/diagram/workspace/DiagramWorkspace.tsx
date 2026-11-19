@@ -80,25 +80,36 @@ export function DiagramWorkspace({
         setFilteredNodeNames([]);
     }
 
-    async function handleExportPng() {
-        // The SVG is transparent, so the PNG gets the background it is shown on
-        const backgroundColor = canvasElementRef.current
-            ? getComputedStyle(canvasElementRef.current).backgroundColor
-            : "white";
+    async function exportFile(formatName: string, fileName: string, createFile: () => Blob | Promise<Blob>) {
         try {
-            const coloredSvg = paintSvgText(diagram.svg, colorScheme);
-            downloadBlob(await convertSvgToPngBlob(coloredSvg, backgroundColor), `${DOWNLOAD_FILE_STEM}.png`);
+            downloadBlob(await createFile(), fileName);
         } catch (error) {
             console.error(error);
-            setWorkspaceErrorMessage("The PNG could not be created. Try the SVG export instead.");
+            setWorkspaceErrorMessage(`The ${formatName} file could not be created.`);
         }
     }
 
     function handleExportSvg() {
-        const coloredSvg = paintSvgText(diagram.svg, colorScheme);
-        downloadBlob(createSvgBlob(coloredSvg), `${DOWNLOAD_FILE_STEM}.svg`);
+        return exportFile("SVG", `${DOWNLOAD_FILE_STEM}.svg`,
+            () => createSvgBlob(paintSvgText(diagram.svg, colorScheme)));
     }
 
+    function handleExportPng() {
+        // The SVG is transparent, so the PNG gets the background it is shown on
+        const backgroundColor = canvasElementRef.current
+            ? getComputedStyle(canvasElementRef.current).backgroundColor
+            : "white";
+        return exportFile("PNG", `${DOWNLOAD_FILE_STEM}.png`,
+            () => convertSvgToPngBlob(paintSvgText(diagram.svg, colorScheme), backgroundColor));
+    }
+
+    function handleExportGraphml() {
+        return exportFile("GraphML", `${DOWNLOAD_FILE_STEM}.graphml`, () => createGraphmlBlob(diagram.graphml.generic));
+    }
+
+    function handleExportYed() {
+        return exportFile("yEd", `${DOWNLOAD_FILE_STEM}-yed.graphml`, () => createGraphmlBlob(diagram.graphml.yed));
+    }
 
     return (
         <div className={classes.workspace}>
@@ -111,8 +122,8 @@ export function DiagramWorkspace({
                 onFitToScreen={() => zoomControlsRef.current?.fitToView({ animationTime: ZOOM_ANIMATION_MILLISECONDS })}
                 onExportSvg={handleExportSvg}
                 onExportPng={handleExportPng}
-                onExportGraphml={() => downloadBlob(createGraphmlBlob(diagram.graphml.generic), `${DOWNLOAD_FILE_STEM}.graphml`)}
-                onExportYed={() => downloadBlob(createGraphmlBlob(diagram.graphml.yed), `${DOWNLOAD_FILE_STEM}-yed.graphml`)}
+                onExportGraphml={handleExportGraphml}
+                onExportYed={handleExportYed}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
             />
             {workspaceErrorMessage && (

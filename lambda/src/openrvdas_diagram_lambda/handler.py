@@ -130,8 +130,8 @@ def log_unexpected_error(request_id, error):
 def handle(event, context):
     request_id = context.aws_request_id
     try:
-        config_files, template_files, graphml_format = validate_request(read_request_body(event))
-        return json_response(200, generate_diagram(config_files, template_files, graphml_format))
+        config_files, template_files, graphml_formats = validate_request(read_request_body(event))
+        return json_response(200, generate_diagram(config_files, template_files, graphml_formats))
     except InvalidRequestError as error:
         return error_response(400, request_id, "invalid_request", str(error))
     except UserInputError as error:
