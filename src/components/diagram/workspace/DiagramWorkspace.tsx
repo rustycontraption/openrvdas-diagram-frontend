@@ -112,7 +112,7 @@ export function DiagramWorkspace({
                 onExportSvg={handleExportSvg}
                 onExportPng={handleExportPng}
                 onExportGraphml={() => downloadBlob(createGraphmlBlob(diagram.graphml.generic), `${DOWNLOAD_FILE_STEM}.graphml`)}
-                onExportYed={() => downloadBlob(createGraphmlBlob(diagram.graphml.yed), `${DOWNLOAD_FILE_STEM}.graphml`)}
+                onExportYed={() => downloadBlob(createGraphmlBlob(diagram.graphml.yed), `${DOWNLOAD_FILE_STEM}-yed.graphml`)}
                 onToggleSettings={() => setIsSettingsOpen((wasOpen) => !wasOpen)}
             />
             {workspaceErrorMessage && (
