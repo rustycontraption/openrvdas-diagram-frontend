@@ -96,6 +96,8 @@ export const DiagramCanvas = forwardRef<ReactZoomPanPinchRef, DiagramCanvasProps
                 maxScale={MAXIMUM_ZOOM}
                 limitToBounds={false}
                 fitOnInit="contain"
+                wheel={{ step: 0.1 }}
+                smooth={false}
             >
                 <TransformComponent wrapperClass={classes.canvasViewport}>
                     <div
