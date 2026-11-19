@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Container } from '@mantine/core';
+import { Container, Title } from '@mantine/core';
 import classes from './Header.module.css';
 import { ThemeToggle } from "../components/ThemeToggle";
 
@@ -11,7 +11,7 @@ export default function Header() {
             <Container fluid size="md">
                 <div className={classes.inner}>
                     <Link href="/" className={classes.link}>
-                        OpenRVDAS Diagram
+                        <Title order={4}>OpenRVDAS Diagram</Title>
                     </Link>
                     <ThemeToggle className={classes.link} />
                 </div>
