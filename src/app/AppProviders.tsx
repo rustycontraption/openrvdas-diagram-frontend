@@ -45,7 +45,7 @@ export default function AppProviders({
     <MantineProvider theme={theme} cssVariablesResolver={resolver}>
       <DiagramSessionProvider>
         <Header />
-        <div style={isFullWindowPage ? undefined : { padding: '2% 5%' }}>
+        <div style={isFullWindowPage ? { flex: 1 } : { padding: '2% 5%', flex: 1 }}>
           {children}
         </div>
         {!isFullWindowPage && <Footer />}

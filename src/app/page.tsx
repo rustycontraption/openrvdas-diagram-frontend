@@ -30,10 +30,7 @@ export default function Home() {
 
     return (
         <div>
-            <Title className={classes.title}>
-                {`OpenRVDAS Diagram`}
-            </Title>
-            <div style={{ height: 50 }}></div>
+            <div style={{ height: 10 }}></div>
             <Container className={classes.content} size="xl">
                 <Stack w="100%" maw={640}>
                     <FileInput
